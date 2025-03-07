@@ -1,0 +1,8 @@
+{
+    "lock": false,
+    "imports": {
+        "@oak/commons": "jsr:@oak/commons@^1.0.0",
+        "@std/cli": "jsr:@std/cli@^1.0.14",
+        "@std/toml": "jsr:@std/toml@^1.0.2"
+    }
+}
