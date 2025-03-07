@@ -120,7 +120,8 @@ class VirtualHost {
     }
 }
 
-if ( Beam.configuration.arguments["--verbose"])
+
+if ( Beam.configuration.arguments["verbose"])
     console.log( Beam.configuration );
 
 Beam.run();
