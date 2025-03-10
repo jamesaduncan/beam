@@ -3,6 +3,8 @@ import { parse, stringify } from "jsr:@std/toml";
 import { parseArgs } from "jsr:@std/cli/parse-args";
 import { deepMerge as merge } from "jsr:@cross/deepmerge";
 import * as path from "jsr:@std/path";
+import HTTPStatusText from "./beam/http-status.mjs"
+
 
 class Beam {
 
@@ -42,7 +44,7 @@ class Beam {
     static async run() {
         Object.entries( this.configuration.VirtualHost ).forEach( ([ key, value ]) => {
             if (key == 'default') return;
-            const constructorData = merge(this.configuration.VirtualHost[key], this.configuration.VirtualHost.default );
+            const constructorData = merge.withOptions({ arrayMergeStrategy: "replace" }, this.configuration.VirtualHost.default, this.configuration.VirtualHost[key]);
             const className = constructorData.class;
             const theClass  = this.classes[ className ];
             this.configuration.VirtualHost[key] = new theClass(constructorData);
@@ -91,7 +93,8 @@ class VirtualHost {
         if ( this._cached_pipeline_) {
             return this._cached_pipeline_;
         } else {
-            return this._cached_pipeline_ ||= (await Promise.all( this.pipeline.map( async ( e ) => { return import(e) } ) )).map( e => e.default );
+            console.log("loading up ", this.pipeline);
+            return this._cached_pipeline_ ||= (await Promise.all( this.pipeline.map( async ( e ) => { return import(e) } ) ));
         }
     }
 
@@ -99,13 +102,14 @@ class VirtualHost {
         const modules = await this.middleware();
         const context = {
             request : aRequest,
-            response: new Response(),
+            response: new Response(null, { status: 204, statusText: HTTPStatusText[204]}),
         }
+        console.log( modules )
         for ( let i = 0; i<modules.length; i++ ) {
             try {
-                const response = await modules[i].apply( this, [ context ]);
-                if ( response ) {
-                    return response;
+                const response = await modules[i].default.apply( this, [ context ]);
+                if ( response instanceof Response ) {
+                    context.response = response;
                 }
             } catch (e) {
                 return new Response(`<h1>Internal Server Error<h1><p>${e}</p>`, { status: 500, headers: {
@@ -113,10 +117,7 @@ class VirtualHost {
                 }})
             }
         }
-    }
-
-    async fetch( aPath ) {
-
+        return context.response;
     }
 }
 
