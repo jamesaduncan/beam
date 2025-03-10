@@ -2,12 +2,12 @@ import { range, responseRange } from "jsr:@oak/commons/range";
 import { typeByExtension } from "jsr:@std/media-types/type-by-extension";
 import { extname } from "jsr:@std/path/extname";
 import * as path from "jsr:@std/path";
+import { DOMParser, Document } from "jsr:@b-fuze/deno-dom";
 
 /*
     this is derived from https://jsr.io/@oak/commons/doc/range for the time being
 */
 export default async function( ctx ) {
-    console.log("in dom hanlder");
     const req = ctx.request;
     const url = new URL(req.url); 
     try {
@@ -22,9 +22,8 @@ export default async function( ctx ) {
         const headers = { "accept-ranges": "bytes", "content-type": typeByExtension( extname( filename )) };
         if ( headers["content-type"] == "text/html" ) {
             headers["accept-ranges"] += ", selector"
-        } else {
-            console.log(headers);
         }
+
         if (req.method === "HEAD") {
             return new Response(null, {
                 headers: {
@@ -33,10 +32,35 @@ export default async function( ctx ) {
                 },
             });
         }
-        if (req.method === "GET") {
-            console.log( `Range: ${req.headers.get('range')}` );
-            console.log( `About to send Content-type: ${headers["content-type"]}`)
 
+        if (req.method === "PATCH") {
+            let selector;
+            if ( [,selector] = req.headers.get('range').match(/^selector=(.+)$/) ) {
+                const buf = new Uint8Array(fileInfo.size);
+                const decoder = new TextDecoder();
+                await file.read(buf);
+                const doc     = new DOMParser().parseFromString( decoder.decode( buf ), "text/html" );
+                const content = await req.text();
+                const test    = new DOMParser().parseFromString( content, "text/html" );
+                if ( test ) {
+                    doc.querySelector( selector ).outerHTML = content;
+                }
+
+                const body = `<!DOCTYPE ${doc.doctype.name}>\n${doc.documentElement.outerHTML}`;
+                const encodedBody = new TextEncoder().encode( body );
+                Deno.writeFile( filename, encodedBody );
+                
+                const encodedContent = new TextEncoder().encode( content );
+                return new Response(encodedContent, {
+                    headers: {
+                        ...headers,
+                        "content-length": String(encodedContent.byteLength),
+                    },
+                });                
+            }
+        }
+
+        if (req.method === "GET") {
             const result = await range(req, fileInfo);
             if (result.ok) {
                 if (result.ranges) {

@@ -1,6 +1,7 @@
 {
     "lock": false,
     "imports": {
+        "@b-fuze/deno-dom": "jsr:@b-fuze/deno-dom@^0.1.49",
         "@oak/commons": "jsr:@oak/commons@^1.0.0",
         "@std/cli": "jsr:@std/cli@^1.0.14",
         "@std/toml": "jsr:@std/toml@^1.0.2"

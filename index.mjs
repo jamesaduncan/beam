@@ -41,7 +41,7 @@ class Beam {
         this.classes[ aClass.name ] = aClass;
     }
 
-    static async run() {
+    static run() {
         Object.entries( this.configuration.VirtualHost ).forEach( ([ key, value ]) => {
             if (key == 'default') return;
             const constructorData = merge.withOptions({ arrayMergeStrategy: "replace" }, this.configuration.VirtualHost.default, this.configuration.VirtualHost[key]);
@@ -72,7 +72,7 @@ class Beam {
         server.finished.then(() => console.log("Server closed"));
     }
 
-    static async serve( aRequest ) {
+    static serve( aRequest ) {
         const url = new URL( aRequest.url);
         const vhost   = Beam.configuration.VirtualHost[ url.hostname ];
         return vhost.service( aRequest )
@@ -93,7 +93,6 @@ class VirtualHost {
         if ( this._cached_pipeline_) {
             return this._cached_pipeline_;
         } else {
-            console.log("loading up ", this.pipeline);
             return this._cached_pipeline_ ||= (await Promise.all( this.pipeline.map( async ( e ) => { return import(e) } ) ));
         }
     }
@@ -104,7 +103,6 @@ class VirtualHost {
             request : aRequest,
             response: new Response(null, { status: 204, statusText: HTTPStatusText[204]}),
         }
-        console.log( modules )
         for ( let i = 0; i<modules.length; i++ ) {
             try {
                 const response = await modules[i].default.apply( this, [ context ]);
