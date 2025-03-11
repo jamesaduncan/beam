@@ -33,7 +33,8 @@ export default async function( ctx ) {
             });
         }
 
-        if (req.method === "PATCH") {
+        /* this is a PUT with a range */
+        if (req.method === "PUT") {
             let selector;
             if ( [,selector] = req.headers.get('range').match(/^selector=(.+)$/) ) {
                 const buf = new Uint8Array(fileInfo.size);
