@@ -1,5 +1,5 @@
 import SelectorSubscriber from "https://jamesaduncan.github.io/selector-subscriber/index.mjs";
-import EnhancedMutationRecord from "http://127.0.0.1:8081/index.mjs" //"https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
+import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
 
 if (!document) document = {};
 
