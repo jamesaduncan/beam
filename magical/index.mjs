@@ -74,7 +74,6 @@ SelectorSubscriber.subscribe(':is(form, button)[method=put][action]', ( aThing )
             }            
         }
 
-
         const headers = new Headers();
         headers.set("Range", `selector=${forSelector}`);
         headers.set("Content-Type", "text/html");

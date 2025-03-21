@@ -1,76 +1,122 @@
 <!DOCTYPE html>
 <html lang="en"><head>
-        <title>HTMagical 2.0 Test Document</title>
+        <title>Beam: a DOM-aware webserver</title>
         <script type="module" src="https://jamesaduncan.github.io/form-template/index.mjs"></script>
         <script type="module" src="https://jamesaduncan.github.io/button-remove/index.mjs"></script>
+        <script type="module" src="https://jamesaduncan.github.io/dom-inline-example/index.mjs"></script>
         <script type="module" src="./index.mjs"></script>
+        <style>
+            body {
+                font-family: sans-serif;
+            }
+
+            .description, .demo {
+                width: 50%;
+            }
+
+        </style>
     </head>
     <body>
-        <h1>A DOM-aware webserver</h1>
-        <section id="simple-button">
-            <script type="module">
-                class ClickCounter extends HTMLElement{
-                    constructor() {
-                        super();
-                    }
+        <section class="description">
+            <h1>Beam: a DOM-aware webserver</h1>
+            <p>
+                A DOM-aware webserver is a webserver that can interact with the DOM on the server-side, in a way
+                that is very similar to a client. For example, a DOM-aware webserver should be able to serve
+                page snipets by having a range specified by a selector in the HTTP headers.
+            </p>
+            <p>
+                Similarly, it should be possible to change parts of the DOM by using HTTP verbs other than GET. The 
+                DELETE method should be able to remove specified DOM elements, the PUT method should be able to insert
+                a DOM element, and a PATCH should be able to do some amalgam of the two.
+            </p>
+            <p>
 
-                    put() {
-                        let value = parseInt( this.innerHTML );
-                        this.innerHTML = value + 1;
-                    }
-                }
-                customElements.define('click-counter', ClickCounter);
-            </script>
-            <p>
-                The button has been clicked <click-counter>120</click-counter> times.
             </p>
-            <button action="click-counter" method="put">Increase Counter</button>
         </section>
-        <section>
+        <section class="demo">
+            <h1>Demonstration</h1>
             <p>
-                This button has been clicked <span id="click-counter">90</span> times.
+                Using Beam, these demonstrations would alter the DOM on both the client and on the server.
             </p>
-            <script>
-                (() => {
-                    let elem = document.querySelector('#click-counter');
-                    elem.put = function() {
-                        let value = parseInt( elem.innerHTML );
-                        elem.innerHTML = value + 1;
-                    }
-                })();
-            </script>
-            <button action="span#click-counter" method="put">Increment Counter</button>
-        </section>
-        <section>
-            <table id="patchable-table" patchable="true">
-                <thead>
+            <p>
+                The first example creates a ClickCounter custom element with a put method in the custom element's
+                class. When the button is clicked, it calls the HTTP method specified in the <code>method</code>
+                attribute on the element specified by the selector in the <code>action</code> attribute. In this
+                example's case, it is just the click-counter button as it's the only one on the page.
+            </p>
+            <p>
+                This also triggers a PUT request to the web server that served this page, such that the dom element
+                specified by the selector in the <code>action</code> attribute is replaced by the same DOM element
+                from the client.
+            </p>
+            <inline-example include="">
+                <section id="simple-button">
+                    <script type="module">
+                        class ClickCounter extends HTMLElement{
+                            constructor() {
+                                super();
+                            }
+
+                            put() {
+                                let value = parseInt( this.innerHTML );
+                                this.innerHTML = value + 1;
+                            }
+                        }
+                        customElements.define('click-counter', ClickCounter);
+                    </script>
+                    <p>
+                        The button has been clicked <click-counter>123</click-counter> times.
+                    </p>
+                    <button action="click-counter" method="put">Increase Counter</button>
+                </section>
+            </inline-example>
+            <section>
+                <p>
+                    This button has been clicked <span id="click-counter">91</span> times.
+                </p>
+                <script>
+                    (() => {
+                        let elem = document.querySelector('#click-counter');
+                        elem.put = function() {
+                            let value = parseInt( elem.innerHTML );
+                            elem.innerHTML = value + 1;
+                        }
+                    })();
+                </script>
+                <button action="span#click-counter" method="put">Increment Counter</button>
+            </section>
+            <section>
+                <table id="patchable-table" patchable="true">
+                    <thead>
+                        <tr>
+                            <th type="col">Name</th>
+                            <th type="col">Email</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>John Doe</td>
+                            <td>johndoe@example.com</td>
+                            <td><button remove="closest" selector="tr">Delete</button></td>
+                        </tr>                            
+                    </tbody>                
+                    <tfoot>
+                        <tr>
+                            <td><input form="table-row" type="text" name="name"></td>
+                            <td><input form="table-row" type="email" name="email"></td>
+                            <td><button form="table-row">Add</button></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <form id="table-row" template="#table-row-template" action="table tbody"></form>
+                <template id="table-row-template">
                     <tr>
-                        <th type="col">Name</th>
-                        <th type="col">Email</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>John Doe</td>
-                        <td>johndoe@example.com</td>
+                        <td><slot name="name"></slot></td>
+                        <td><slot name="email"></slot></td>
                         <td><button remove="closest" selector="tr">Delete</button></td>
-                    </tr>                            
-                </tbody>                
-                <tfoot>
-                    <tr>
-                        <td><input form="table-row" type="text" name="name"></td>
-                        <td><input form="table-row" type="email" name="email"></td>
-                        <td><button form="table-row">Add</button></td>
                     </tr>
-                </tfoot>
-            </table>
-            <form id="table-row" template="#table-row-template" action="table tbody"></form>
-            <template id="table-row-template">
-                <tr>
-                    <td><slot name="name"></slot></td>
-                    <td><slot name="email"></slot></td>
-                    <td><button remove="closest" selector="tr">Delete</button></td>
-                </tr>
-            </template>
+                </template>
+            </section>
         </section>
+    
 </body></html>
