@@ -22,13 +22,13 @@
                 customElements.define('click-counter', ClickCounter);
             </script>
             <p>
-                The button has been clicked <click-counter>118</click-counter> times.
+                The button has been clicked <click-counter>120</click-counter> times.
             </p>
-            <button for="click-counter" method="put">Increase Counter</button>
+            <button action="click-counter" method="put">Increase Counter</button>
         </section>
         <section>
             <p>
-                This button has been clicked <span id="click-counter">81</span> times.
+                This button has been clicked <span id="click-counter">90</span> times.
             </p>
             <script>
                 (() => {
@@ -39,7 +39,7 @@
                     }
                 })();
             </script>
-            <button for="span#click-counter" method="put">Increment Counter</button>
+            <button action="span#click-counter" method="put">Increment Counter</button>
         </section>
         <section>
             <table id="patchable-table" patchable="true">
@@ -54,7 +54,7 @@
                         <td>John Doe</td>
                         <td>johndoe@example.com</td>
                         <td><button remove="closest" selector="tr">Delete</button></td>
-                    </tr>
+                    </tr>                            
                 </tbody>                
                 <tfoot>
                     <tr>

@@ -43,14 +43,14 @@ SelectorSubscriber.subscribe(':is(button)[method=delete][closest]', ( aButton ) 
     });
 })
 
-SelectorSubscriber.subscribe(':is(form, button)[method=put][for]', ( aThing ) => {
+SelectorSubscriber.subscribe(':is(form, button)[method=put][action]', ( aThing ) => {
     let eventName = "submit"
     if ( aThing instanceof HTMLButtonElement ) eventName = "click"
 
     aThing.addEventListener(eventName, async ( theEvent ) => {
         theEvent.preventDefault();
 
-        const forSelector = theEvent.target.getAttribute('for');
+        const forSelector = theEvent.target.getAttribute('action');
         const destination = document.querySelector(forSelector);
         const originalCopy = destination.cloneNode( true ); // so we can rollback if we need to.
 
