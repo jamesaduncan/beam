@@ -3,15 +3,6 @@ import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-
 
 if (!document) document = {};
 
-function generateSelector( el ) {
-    let path = [], parent;
-    while (parent = el.parentNode) {
-        path.unshift(`${el.tagName}:nth-child(${[].indexOf.call(parent.children, el)+1})`);
-        el = parent;
-    }
-    return `${path.join(' > ')}`.toLowerCase();        
-}
-
 
 SelectorSubscriber.subscribe('[patchable]', async ( theElement ) => {
     const observer = new MutationObserver( async( records, observer ) => {        
