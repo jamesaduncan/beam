@@ -49,7 +49,7 @@ export default async function( ctx ) {
                 const elem = doc.querySelector(selector);
                 elem.parentNode.removeChild( elem );
 
-                const body = `<!DOCTYPE ${doc.doctype.name}>\n${doc.documentElement.outerHTML}`;
+                const body = docToString( doc );
                 const encodedBody = new TextEncoder().encode( body );
                 Deno.writeFile( filename, encodedBody );
                 return new Response(null, {
@@ -75,7 +75,7 @@ export default async function( ctx ) {
             
             emr.mutate( doc );
   
-            const body = `<!DOCTYPE ${doc.doctype.name}>\n${doc.documentElement.outerHTML}`;
+            const body = docToString( doc );
             const encodedBody = new TextEncoder().encode( body );
             Deno.writeFile( filename, encodedBody )
             return new Response(null, {
@@ -101,7 +101,7 @@ export default async function( ctx ) {
                     doc.querySelector( selector ).outerHTML = content;
                 }
 
-                const body = `<!DOCTYPE ${doc.doctype.name}>\n${doc.documentElement.outerHTML}`;
+                const body = docToString( doc );
                 const encodedBody = new TextEncoder().encode( body );
                 Deno.writeFile( filename, encodedBody );
                 
@@ -119,8 +119,8 @@ export default async function( ctx ) {
             let selector;
             if ( req.headers.get('range'))
                 [,selector] = req.headers.get('range').match(/^selector=(.+)$/);
+
             if ( selector ) {
-                console.log("got range!");
                 const buf = new Uint8Array(fileInfo.size);
                 const decoder = new TextDecoder();
                 await file.read(buf);
