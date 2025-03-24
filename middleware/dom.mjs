@@ -7,8 +7,8 @@ import { JSDOM } from "npm:jsdom"
 
 import { DOMParser, XMLSerializer }  from 'npm:@xmldom/xmldom';
 
-import EnhancedMutationRecord from "http://127.0.0.1:8081/index.mjs";
-//import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
+//import EnhancedMutationRecord from "http://127.0.0.1:8081/index.mjs";
+import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
 
 
 function docToString(doc) {
