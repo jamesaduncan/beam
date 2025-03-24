@@ -1,81 +1,51 @@
 import SelectorSubscriber from "https://jamesaduncan.github.io/selector-subscriber/index.mjs";
-import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
+import * as DAS from "https://jamesaduncan.github.io/dom-aware-primitives/index.mjs"; // this forces the load before we get there.
 
-if (!document) document = {};
+const { DOMAware } = await window.location.server;
 
-const documentCopy = document.cloneNode( true );
-
-
-SelectorSubscriber.subscribe('[patchable]', async ( theElement ) => {
-    const observer = new MutationObserver( async( records, observer ) => {        
-
-        const emr = EnhancedMutationRecord.fromMutationRecord( records );
-        emr.mutate( documentCopy );
-        console.log( documentCopy )
-
-        const url = theElement.getAttribute('action') || window.location;
-        const headers = new Headers();
-        headers.set('Content-Type', 'application/json');
-        const response = await fetch(url, {
-            method: 'PATCH',
-            headers: headers,
-            body: JSON.stringify( emr )
+if (DOMAware) {
+    SelectorSubscriber.subscribe('[patchable]', async ( theElement ) => {
+        const observer = new MutationObserver( async( records, observer ) => {        
+            const emr = EnhancedMutationRecord.fromMutationRecord( records );
+            const response = await theElement.PATCH( emr );
+            if ( response.ok ) {
+                
+            } else {
+                // present the opportunity to rewind the changes with some sort of
+                // error event.
+            }
         });
-        if ( response.ok ) {
-            
-        } else {
-            // present the opportunity to rewind the changes with some sort of
-            // error event.
-        }
+        observer.observe( theElement, { subtree: true, childList: true });
     });
-    observer.observe( theElement, { subtree: true, childList: true });
-})
 
-SelectorSubscriber.subscribe(':is(button)[method=delete][closest]', ( aButton ) => {
-    aButton.addEventListener('click', async ( theEvent ) => {
-        const closestSelector = aButton.getAttribute('closest');
-        const matchedElement  = aButton.closest( closestSelector );
-
-        const headers = new Headers();
-        headers.set('Range', `selector=${ generateSelector(matchedElement) }`)
-        const response = await fetch(window.location, {
-            headers,
-            method: 'DELETE'
+    SelectorSubscriber.subscribe(':is(form)[method=put][action]', (aThing) => {
+        aThing.addEventListener('submit', (e) => {
+            e.preventDefault();
+            document.querySelector( e.target.getAttribute('action') ).PUT();
         })
-        if (response.ok) {
-            matchedElement.parentNode.removeChild( matchedElement );
-        }        
     });
-})
 
-SelectorSubscriber.subscribe(':is(form, button)[method=put][action]', ( aThing ) => {
-    let eventName = "submit"
-    if ( aThing instanceof HTMLButtonElement ) eventName = "click"
+    SelectorSubscriber.subscribe(':is(button)[method=put][action]', ( aThing ) => {
+        aThing.addEventListener('click', async ( theEvent ) => {
+            const forSelector = theEvent.target.getAttribute('action');
+            const destination = document.querySelector(forSelector);
+            destination.PUT();
+        });
+    });
 
-    aThing.addEventListener(eventName, async ( theEvent ) => {
-        theEvent.preventDefault();
-
-        const forSelector = theEvent.target.getAttribute('action');
-        const destination = document.querySelector(forSelector);
-        const originalCopy = destination.cloneNode( true ); // so we can rollback if we need to.
-
-        if ( destination.put ) {
-            destination.put.apply(destination, [] )
-        }
-
-        const headers = new Headers();
-        headers.set("Range", `selector=${forSelector}`);
-        headers.set("Content-Type", "text/html");
-
-        const response = await fetch(window.location, {
-            headers,
-            body  : destination.outerHTML,
-            method: 'PUT'
+    SelectorSubscriber.subscribe(':not(form, button, a, input)[method=put]', ( aThing ) => {
+        const eventToBind = aThing.getAttribute('when') || 'blur';
+        aThing.addEventListener(eventToBind, ( theEvent ) => {
+            theEvent.target.PUT();   
         })
-        if (response.ok) {
-            if (aThing instanceof HTMLFormElement) aThing.reset();
-        } else {
-            actOnElement.innerHTML = originalCopy.innerHTML;
-        }
     });
-})
+
+    SelectorSubscriber.subscribe(':is(input)[method=put]', (anInput) => {
+        anInput.addEventListener('change', () => {
+            anInput.setAttribute('value', anInput.value);
+            anInput.PUT();
+        });
+    });
+} else {
+    console.log('not dom aware')
+}

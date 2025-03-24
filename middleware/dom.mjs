@@ -49,7 +49,7 @@ export default async function( ctx ) {
                 const buf = new Uint8Array(fileInfo.size);
                 const decoder = new TextDecoder();
                 await file.read(buf);
-                const doc    = new Deno.DOMParser().parseFromString( decoder.decode( buf ), "text/html" );                
+                const doc    = new DenoDOM.DOMParser().parseFromString( decoder.decode( buf ), "text/html" );                
                 const elem = doc.querySelector(selector);                
                 elem.parentNode.removeChild( elem );
 
@@ -99,6 +99,16 @@ export default async function( ctx ) {
                     }
                 })
             }
+        }
+
+        if (req.method === "OPTIONS") {
+            return new Response(null, {
+                status: 200,
+                headers: {
+                    "Allow": "OPTIONS, GET, HEAD, PUT, PATCH",
+                    ...headers
+                }
+            })
         }
 
         /* this is a PUT with a range */
