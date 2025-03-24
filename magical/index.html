@@ -5,38 +5,6 @@
         <script type="module" src="https://jamesaduncan.github.io/link-include/index.mjs"></script>
         <script type="module" src="https://jamesaduncan.github.io/button-remove/index.mjs"></script>
         <script type="module" src="./index.mjs"></script>
-
-        <style>
-            body {
-                --background-color: #ffffff;
-                background-color: var(--background-color);
-            }
-
-            .flash {
-                height: 500px;
-                width: 500px;
-                background-color: black;
-                    
-                animation: success 1.5s forwards linear normal;
-            }
-
-            @keyframes sucesss {
-                0% {
-                    background-color: palegoldenrod;
-                }
-                100% {
-                    background-color: var(--background-color);
-                }
-            }
-        </style>
-        <script>
-            document.addEventListener("MSuccess", () => {
-                document.body.classList.add('success');
-                document.body.addEventListener('animationend', () => {
-                    document.body.classList.remove('success')
-                })
-            });
-        </script>
     </head>
     <body>
         <h1>A DOM-aware webserver</h1>
@@ -55,13 +23,13 @@
                 customElements.define('click-counter', ClickCounter);
             </script>
             <p>
-                The button has been clicked <click-counter>118</click-counter> times.
+                The button has been clicked <click-counter>120</click-counter> times.
             </p>
             <button for="click-counter" method="put">Increase Counter</button>
         </section>
         <section>
             <p>
-                This button has been clicked <span id="click-counter">81</span> times.
+                This button has been clicked <span id="click-counter">84</span> times.
             </p>
             <script>
                 (() => {
@@ -83,23 +51,24 @@
                     </tr>
                 </thead>
                 <tbody>
-                    
-                                           
-                    
-                
-            
-                
-            
+                    <tr>
+                        <td>John Doe</td>
+                        <td>johndoe@example.com</td>
+                        <td><button remove="closest" selector="tr">Delete</button></td>
+                    </tr>
+                    <tr>
+                        <td>Bill Smith</td>
+                        <td>bill@example.com</td>
+                        <td><button remove="closest" selector="tr">Delete</button></td>
+                    </tr>
                 
             
                 
             <tr>
-                    <td>John Doe</td>
-                    <td>johndoe@example.com</td>
+                    <td>Rosie</td>
+                    <td>rosie@theduncans.family</td>
                     <td><button remove="closest" selector="tr">Delete</button></td>
                 </tr>
-                
-            
                 </tbody>                
                 <tfoot>
                     <tr>
@@ -118,5 +87,6 @@
                 </tr>
             </template>
         </section>
-        <link rel="include" href="example.html" select="datalist#people">
+        
+    
 </body></html>
