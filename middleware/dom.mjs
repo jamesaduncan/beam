@@ -4,7 +4,11 @@ import { extname } from "jsr:@std/path/extname";
 import * as path from "jsr:@std/path";
 import * as DenoDOM from "jsr:@b-fuze/deno-dom";
 import { JSDOM } from "npm:jsdom"
-import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
+
+import { DOMParser, XMLSerializer }  from 'npm:@xmldom/xmldom';
+
+import EnhancedMutationRecord from "http://127.0.0.1:8081/index.mjs";
+//import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
 
 
 function docToString(doc) {
@@ -45,8 +49,8 @@ export default async function( ctx ) {
                 const buf = new Uint8Array(fileInfo.size);
                 const decoder = new TextDecoder();
                 await file.read(buf);
-                const doc    = new DenoDOM.DOMParser().parseFromString( decoder.decode( buf ), "text/html" );                
-                const elem = doc.querySelector(selector);
+                const doc    = new Deno.DOMParser().parseFromString( decoder.decode( buf ), "text/html" );                
+                const elem = doc.querySelector(selector);                
                 elem.parentNode.removeChild( elem );
 
                 const body = docToString( doc );
@@ -72,19 +76,29 @@ export default async function( ctx ) {
             /* we have to use JSDOM here, because deno-dom doesn't have document.evaluate */
             const dom    = new JSDOM( decoder.decode( fileContents ) );
             const doc    = dom.window.document;
-            
-            emr.mutate( doc );
-  
-            const body = docToString( doc );
-            const encodedBody = new TextEncoder().encode( body );
-            Deno.writeFile( filename, encodedBody )
-            return new Response(null, {
-                status: 204,
-                statusText: 'No Content',
-                headers: {
-                    ...headers
-                }
-            })
+
+            try {
+                emr.mutate( doc );
+
+                const encodedBody = new TextEncoder().encode( body );
+                Deno.writeFile( filename, encodedBody )
+                return new Response(null, {
+                    status: 204,
+                    statusText: 'No Content',
+                    headers: {
+                        ...headers
+                    }
+                });
+            } catch(e) {
+                console.log(`error trying to patch ${filename}:`,e)
+                return new Response(null, {
+                    status: 500,
+                    statusText: 'Internal Server Error',
+                    headers: {
+                        ...headers
+                    }
+                })
+            }
         }
 
         /* this is a PUT with a range */

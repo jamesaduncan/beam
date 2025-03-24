@@ -3,10 +3,15 @@ import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-
 
 if (!document) document = {};
 
+const documentCopy = document.cloneNode( true );
+
 
 SelectorSubscriber.subscribe('[patchable]', async ( theElement ) => {
     const observer = new MutationObserver( async( records, observer ) => {        
+
         const emr = EnhancedMutationRecord.fromMutationRecord( records );
+        emr.mutate( documentCopy );
+        console.log( documentCopy )
 
         const url = theElement.getAttribute('action') || window.location;
         const headers = new Headers();
@@ -84,19 +89,7 @@ SelectorSubscriber.subscribe(':is(form, button)[method=put][action]', ( aThing )
             method: 'PUT'
         })
         if (response.ok) {
-            if (aThing instanceof HTMLFormElement) aThing.reset();
-            const evt = new Event('MSuccess', {
-                bubbles: true,
-                detail: { response: response, method: 'PUT', headers }
-            })
-            aThing.dispatchEvent( evt )            
         } else {
-            actOnElement.innerHTML = originalCopy.innerHTML;
-            const evt = new Event('MError', {
-                bubbles: true,
-                detail: { response: response, method: 'PUT', headers }
-            })
-            aThing.dispatchEvent( evt )            
         }
     });
 })
