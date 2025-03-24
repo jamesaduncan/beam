@@ -51,121 +51,76 @@
                             super();
                         }
 
-                        put() {
-                            let value = parseInt( this.innerHTML );
-                            this.innerHTML = value + 1;
-                        }
+                    put() {
+                        let value = parseInt( this.innerHTML );
+                        this.innerHTML = value + 1;
                     }
-                    customElements.define('click-counter', ClickCounter);
-                </script>
-                <p>
-                    The button has been clicked <click-counter>126</click-counter> times.
-                </p>
-                <button action="click-counter" method="put">Increase Counter</button>
-            </section>
+                }
+                customElements.define('click-counter', ClickCounter);
+            </script>
             <p>
-                This also triggers a PUT request to the web server that served this page, such that the dom element
-                specified by the selector in the <code>action</code> attribute is replaced by the same DOM element
-                from the client. In the request below, you'll notice that the Range header is included, with a
-                range specifier that looks like <code>selector=click-counter</code>. This matches the selector specified
-                in the <code>action</code> attribute of the <code>button</code> element, and tells the DOM-aware server
-                the part of the document we're interested in.
+                The button has been clicked <click-counter>122</click-counter> times.
             </p>
+            <button action="click-counter" method="put">Increase Counter</button>
+        </section>
+        <section>
             <p>
-                You'll notice that the body of the request matches a snippet of HTML that represents what the client thinks
-                should be in that position in the document.
+                This button has been clicked <span id="click-counter">86</span> times.
             </p>
-            <pre>        
-                PUT / HTTP/1.1
-                Accept: */*
-                Accept-Encoding: identity
-                Accept-Language: en-GB,en-US;q=0.9,en;q=0.8
-                Connection: keep-alive
-                Content-Length: 34
-                Host: 127.0.0.1:8009
-                Origin: http://127.0.0.1:8009
-                Referer: http://127.0.0.1:8009/
-                Sec-Fetch-Dest: empty
-                Sec-Fetch-Mode: cors
-                Sec-Fetch-Site: same-origin
-                User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36
-                content-type: text/html
-                range: selector=click-counter
-                sec-ch-ua: "Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"
-                sec-ch-ua-mobile: ?0
-                sec-ch-ua-platform: "macOS"
-
-                &lt;click-counter&gt;127&lt;/click-counter&gt;
-            </pre>
-            <p>
-                The server replies with what it thinks the state of the body should be.
-            </p>
-            <pre>                HTTP/1.1 200 OK
-                accept-ranges: bytes, selector
-                content-type: text/html
-                content-length: 34
-                vary: Accept-Encoding
-                date: Sat, 22 Mar 2025 09:23:19 GMT
-
-                &lt;click-counter&gt;127&lt;/click-counter&gt;
-            </pre>
-            <p>
-                If you don't want to use custom elements for some reason, you can alternately
-                just add a <code>put</code> property to the element, with a function that alters
-                the DOM appropriately, and it works in the same way.
-            </p>
-                <section>
-                    <p>
-                        This button has been clicked <span id="click-counter">92</span> times.
-                    </p>
-                    <script>
-                        (() => {
-                            let elem = document.querySelector('#click-counter');
-                            elem.put = function() {
-                                let value = parseInt( elem.innerHTML );
-                                elem.innerHTML = value + 1;
-                            }
-                        })();
-                    </script>
-                    <button action="span#click-counter" method="put">Increment Counter</button>
-                </section>
-            <h2>PATCH requests</h2>
-            <p>
-                A patch is a slightly different beast, and requires a web server to be aware of how
-                to apply DOM mutations.
-            </p>
-            <section>
-                <table id="patchable-table" patchable="true">
-                    <thead>
-                        <tr>
-                            <th type="col">Name</th>
-                            <th type="col">Email</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>John Doe</td>
-                            <td>johndoe@example.com</td>
-                            <td><button remove="closest" selector="tr">Delete</button></td>
-                        </tr>                            
-                    </tbody>                
-                    <tfoot>
-                        <tr>
-                            <td><input form="table-row" type="text" name="name"></td>
-                            <td><input form="table-row" type="email" name="email"></td>
-                            <td><button form="table-row">Add</button></td>
-                        </tr>
-                    </tfoot>
-                </table>
-                <form id="table-row" template="#table-row-template" action="table tbody"></form>
-                <template id="table-row-template">
+            <script>
+                (() => {
+                    let elem = document.querySelector('#click-counter');
+                    elem.put = function() {
+                        let value = parseInt( elem.innerHTML );
+                        elem.innerHTML = value + 1;
+                    }
+                })();
+            </script>
+            <button action="span#click-counter" method="put">Increment Counter</button>
+        </section>
+        <section>
+            <table id="patchable-table" patchable="true">
+                <thead>
                     <tr>
-                        <td><slot name="name"></slot></td>
-                        <td><slot name="email"></slot></td>
+                        <th type="col">Name</th>
+                        <th type="col">Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>John Doe</td>
+                        <td>johndoe@example.com</td>
                         <td><button remove="closest" selector="tr">Delete</button></td>
                     </tr>
-                </template>
-            </section>
+                    <tr>
+                        <td>Bill Smith</td>
+                        <td>bill@example.com</td>
+                        <td><button remove="closest" selector="tr">Delete</button></td>
+                    </tr>
+                
+            
+                
+            
+                
+            
+                </tbody>                
+                <tfoot>
+                    <tr>
+                        <td><input form="table-row" type="text" name="name"></td>
+                        <td><input form="table-row" type="email" name="email"></td>
+                        <td><button form="table-row">Add</button></td>
+                    </tr>
+                </tfoot>
+            </table>
+            <form id="table-row" template="#table-row-template" action="table tbody"></form>
+            <template id="table-row-template">
+                <tr>
+                    <td><slot name="name"></slot></td>
+                    <td><slot name="email"></slot></td>
+                    <td><button remove="closest" selector="tr">Delete</button></td>
+                </tr>
+            </template>
         </section>
+        
     
-</body></html>
+</section></body></html>

@@ -15,7 +15,7 @@ SelectorSubscriber.subscribe('[patchable]', async ( theElement ) => {
 
         const url = theElement.getAttribute('action') || window.location;
         const headers = new Headers();
-        headers.set('content-type', 'application/json');
+        headers.set('Content-Type', 'application/json');
         const response = await fetch(url, {
             method: 'PATCH',
             headers: headers,
@@ -61,22 +61,6 @@ SelectorSubscriber.subscribe(':is(form, button)[method=put][action]', ( aThing )
 
         if ( destination.put ) {
             destination.put.apply(destination, [] )
-        } else {
-            const formdata = new FormData( aThing );
-            const template = destination.querySelector('template');
-            if ( template ) {
-                const clone = template.content.cloneNode( true );
-                formdata.keys().forEach( (key) => {
-                    try {
-                        clone.querySelector(`slot[name=${key}]`).replaceWith( document.createTextNode( formdata.get( key ) ) );
-                    } catch(e) {
-                        console.warn(e);
-                    }
-                });
-                destination.appendChild( clone );
-            } else {
-                console.error(`no way to handle form`);
-            }            
         }
 
         const headers = new Headers();
@@ -89,7 +73,9 @@ SelectorSubscriber.subscribe(':is(form, button)[method=put][action]', ( aThing )
             method: 'PUT'
         })
         if (response.ok) {
+            if (aThing instanceof HTMLFormElement) aThing.reset();
         } else {
+            actOnElement.innerHTML = originalCopy.innerHTML;
         }
     });
 })

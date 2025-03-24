@@ -79,7 +79,7 @@ export default async function( ctx ) {
 
             try {
                 emr.mutate( doc );
-
+                const body = docToString( doc );
                 const encodedBody = new TextEncoder().encode( body );
                 Deno.writeFile( filename, encodedBody )
                 return new Response(null, {
