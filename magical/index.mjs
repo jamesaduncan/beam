@@ -21,7 +21,7 @@ if (DOMAware) {
     SelectorSubscriber.subscribe(':is(form)[method=put][action]', (aThing) => {
         aThing.addEventListener('submit', (e) => {
             e.preventDefault();
-            document.querySelector( e.target.getAttribute('action') ).PUT();
+            const response = document.querySelector( e.target.getAttribute('action') ).PUT();
         })
     });
 
@@ -29,21 +29,21 @@ if (DOMAware) {
         aThing.addEventListener('click', async ( theEvent ) => {
             const forSelector = theEvent.target.getAttribute('action');
             const destination = document.querySelector(forSelector);
-            destination.PUT();
+            const response = destination.PUT();
         });
     });
 
     SelectorSubscriber.subscribe(':not(form, button, a, input)[method=put]', ( aThing ) => {
         const eventToBind = aThing.getAttribute('when') || 'blur';
         aThing.addEventListener(eventToBind, ( theEvent ) => {
-            theEvent.target.PUT();   
+            const response = theEvent.target.PUT();   
         })
     });
 
     SelectorSubscriber.subscribe(':is(input)[method=put]', (anInput) => {
         anInput.addEventListener('change', () => {
             anInput.setAttribute('value', anInput.value);
-            anInput.PUT();
+            const response = anInput.PUT();
         });
     });
 } else {
