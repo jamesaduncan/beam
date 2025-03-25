@@ -1,9 +1,12 @@
 import SelectorSubscriber from "https://jamesaduncan.github.io/selector-subscriber/index.mjs";
-import * as DAS from "https://jamesaduncan.github.io/dom-aware-primitives/index.mjs"; // this forces the load before we get there.
 
-const { DOMAware } = await window.location.server;
+/* these elements all build up into a big handy box of tricks */
+import * as DAS from "https://jamesaduncan.github.io/dom-aware-primitives/index.mjs";
+import * as ButtonRemove from "https://jamesaduncan.github.io/button-remove/index.mjs";
+import * as LinkInclude from "https://jamesaduncan.github.io/link-include/index.mjs";
+import * as FormTemplate from "https://jamesaduncan.github.io/form-template/index.mjs";
 
-if (DOMAware) {
+if (window.location.server.DASAware) {
     SelectorSubscriber.subscribe('[patchable]', async ( theElement ) => {
         const observer = new MutationObserver( async( records, observer ) => {        
             const emr = EnhancedMutationRecord.fromMutationRecord( records );
@@ -28,7 +31,7 @@ if (DOMAware) {
     SelectorSubscriber.subscribe(':is(button)[method=put][action]', ( aThing ) => {
         aThing.addEventListener('click', async ( theEvent ) => {
             const forSelector = theEvent.target.getAttribute('action');
-            const destination = document.querySelector(forSelector);
+            const destination = document.querySelector( forSelector );
             const response = destination.PUT();
         });
     });
@@ -43,7 +46,7 @@ if (DOMAware) {
     SelectorSubscriber.subscribe(':is(input)[method=put]', (anInput) => {
         anInput.addEventListener('change', () => {
             anInput.setAttribute('value', anInput.value);
-            const response = anInput.PUT();
+            const response = theEvent.target.PUT();
         });
     });
 } else {

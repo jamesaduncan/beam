@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head>
         <title>Beam: a DOM-aware webserver</title>
-        <script type="module" src="https://jamesaduncan.github.io/dom-aware-primitives/index.mjs"></script>
-        <script type="module" src="https://jamesaduncan.github.io/button-remove/index.mjs"></script>
-        <script type="module" src="https://jamesaduncan.github.io/link-include/index.mjs"></script>
-        <script type="module" src="https://jamesaduncan.github.io/form-template/index.mjs"></script>
         <script type="module" src="./index.mjs"></script>
         <style>
             body {
@@ -17,12 +13,21 @@
         </style>
     </head>
     <body>
+        <script>
+            document.addEventListener('DASAvailable', ( event ) => {
+                console.log( `DAS available:`, event );
+            });
+            document.addEventListener('DASUnavailable', ( event ) => {
+                console.log( `DAS unavailable:`, event );
+            });
+
+        </script>
         <section class="description">
             <h1>Beam: a DOM-aware webserver</h1>
             <p>
                 A DOM-aware webserver is a webserver that can interact with the DOM on the server-side, in a way
                 that is very similar to a client. For example, a DOM-aware webserver should be able to serve
-                page snipets by having a range specified by a selector in the HTTP headers.
+                page fragments by having a range specified by a selector in the HTTP headers.
             </p>
             <p>
                 Similarly, it should be possible to change parts of the DOM by using HTTP verbs other than GET. The 
@@ -62,13 +67,13 @@
                     customElements.define('click-counter', ClickCounter);
                 </script>
                 <p>
-                    The button has been clicked <click-counter>150</click-counter> times.
+                    The button has been clicked <click-counter>162</click-counter> times.
                 </p>
                 <button action="click-counter" method="put">Increase Counter</button>
             </section>
             <section>
                 <p>
-                    This button has been clicked <span id="click-counter">94</span> times.
+                    This button has been clicked <span id="click-counter">96</span> times.
                 </p>
                 <script>
                     (() => {
@@ -96,7 +101,17 @@
                             <td>johndoe@example.com</td>
                             <td><button remove="closest" selector="tr">Delete</button></td>
                         </tr>                    
-                    </tbody>                
+                    
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                </tbody>                
                     <tfoot>
                         <tr>
                             <td><input form="table-row" type="text" name="name"></td>
