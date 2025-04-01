@@ -36,15 +36,16 @@ if (window.location.server.DASAware) {
         });
     });
 
-    SelectorSubscriber.subscribe(':not(form, button, a, input)[method=put]', ( aThing ) => {
+    SelectorSubscriber.subscribe(':not(form, button, a, input)[method=put], :is(textarea)[method=put]', ( aThing ) => {
         const eventToBind = aThing.getAttribute('when') || 'blur';
         aThing.addEventListener(eventToBind, ( theEvent ) => {
-            const response = theEvent.target.PUT();   
+            if ( aThing instanceof HTMLTextAreaElement) aThing.innerText = aThing.value;
+            const response = theEvent.target.PUT();
         })
     });
 
     SelectorSubscriber.subscribe(':is(input)[method=put]', (anInput) => {
-        anInput.addEventListener('change', () => {
+        anInput.addEventListener('change', ( theEvent ) => {
             anInput.setAttribute('value', anInput.value);
             const response = theEvent.target.PUT();
         });
