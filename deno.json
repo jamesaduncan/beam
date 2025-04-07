@@ -6,6 +6,8 @@
         "@std/cli": "jsr:@std/cli@^1.0.14",
         "@std/toml": "jsr:@std/toml@^1.0.2",
         "@xmldom/xmldom": "npm:@xmldom/xmldom@^0.9.8",
+        "happy-dom": "npm:happy-dom@^17.4.4",
+        "jsdom-worker": "npm:jsdom-worker@^0.3.0",
         "xpath": "npm:xpath@^0.0.34"
     }
 }

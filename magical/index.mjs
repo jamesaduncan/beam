@@ -1,5 +1,8 @@
 import SelectorSubscriber from "https://jamesaduncan.github.io/selector-subscriber/index.mjs";
 
+import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
+
+
 /* these elements all build up into a big handy box of tricks */
 import * as DAS from "https://jamesaduncan.github.io/dom-aware-primitives/index.mjs";
 import * as ButtonRemove from "https://jamesaduncan.github.io/button-remove/index.mjs";
@@ -7,10 +10,13 @@ import * as LinkInclude from "https://jamesaduncan.github.io/link-include/index.
 import * as FormTemplate from "https://jamesaduncan.github.io/form-template/index.mjs";
 
 if (window.location.server.DASAware) {
+    console.log('the server is DAS aware');
     SelectorSubscriber.subscribe('[patchable]', async ( theElement ) => {
+        console.log("found a patchable thing", theElement);
         const observer = new MutationObserver( async( records, observer ) => {        
             const emr = EnhancedMutationRecord.fromMutationRecord( records );
             const response = await theElement.PATCH( emr );
+            console.log(response);
             if ( response.ok ) {
                 
             } else {
