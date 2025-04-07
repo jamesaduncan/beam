@@ -308,7 +308,6 @@ class DOMServer {
                 }
             })
         } else {
-
             if ( req.file.mimetype === 'text/html' ) {            
                 const doc = await this.readDOM(req)
                 const result = await range(req, req.file.info);
