@@ -6,12 +6,9 @@ import * as DenoDOM from "jsr:@b-fuze/deno-dom";
 import { JSDOM } from "npm:jsdom"
 import * as Workers from "npm:jsdom-worker";
 import * as vm from 'node:vm'
-import { Browser } from 'npm:happy-dom';
 
 
 import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
-import { cp } from "node:fs";
-import { doesNotMatch } from "node:assert";
 
 class Storage {
     constructor() {
@@ -200,37 +197,28 @@ class DOMServer {
         const buf = new Uint8Array(req.file.info.size);
         const decoder = new TextDecoder();
         await req.file.handle.read(buf);
-        if (true) { // normally we shoudl only do this if we need xpath, but happy-dom doesn't seem to be running modules
-            const dom    = new JSDOM( decoder.decode( buf ), {
-                url: req.url,
-                contentType: 'text/html',
-                includeNodeLocations: true,
-                storageQuota: 5000000,
-                runScripts: "dangerously",
-                resources: "usable",
-                pretendToBeVisual: true
-            });
-            //const modules = await ModuleLoader(dom)
-            /* handle the localStorage stuff */
-            dom.window.localStorage = localStorage;
-            Object.defineProperty(dom.window, "localStorage", {
-                value: localStorage
-            });
+        const dom    = new JSDOM( decoder.decode( buf ), {
+            url: req.url,
+            contentType: 'text/html',
+            includeNodeLocations: true,
+            storageQuota: 5000000,
+            runScripts: "dangerously",
+            resources: "usable",
+            pretendToBeVisual: true
+        });
+        //const modules = await ModuleLoader(dom)
+        /* handle the localStorage stuff */
+        dom.window.localStorage = localStorage;
+        Object.defineProperty(dom.window, "localStorage", {
+            value: localStorage
+        });
 
-            const theEvent = createCustomEvent(dom.window.document, 'DASDocumentRead', { bubbles: true, cancelable: true, detail: {
-                request: req,
-            }});
-            dom.window.document.dispatchEvent(theEvent);
+        const theEvent = createCustomEvent(dom.window.document, 'DASDocumentRead', { bubbles: true, cancelable: true, detail: {
+            request: req,
+        }});
+        dom.window.document.dispatchEvent(theEvent);
 
-            return dom.window.document;
-        } else {
-            const browser = new Browser();
-            browser.console = { log: () => {}, error: () => {}, peep: (...args) => { console.log(...args) } };
-            const page = browser.newPage();
-            page.url = req.url;
-            page.content = decoder.decode( buf );
-            return page.mainFrame.document;
-        }
+        return dom.window.document;
     }
 
     static prepareHeaders( req ) {
