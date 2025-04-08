@@ -2,11 +2,24 @@
 <html lang="en"><head>
         <title>Beam: a DOM-aware webserver</title>
         <script>
-            document.addEventListener('DASDocumentSent', (event) => {
-                console.log("DASDocumentSent event being handled");
-                let count = parseInt( window.localStorage.getItem('count') || 0 );
-                window.localStorage.setItem('count', count + 1);
+            document.addEventListener('DASDocumentRead', (event) => {
+                console.log('DASDocumentRead event being handled');
+            })
+            document.addEventListener('HTTPGet', async (event) => {
+                console.log("HTTPGet event being handled");
+                let count = parseInt( (await window.localStorage.getItem('count'))|| 0 );
+                if ( !count || count == 'NaN') {
+                    count = 0;
+                }
+                count = count + 1;
+                window.localStorage.setItem('count', count);
                 console.log(`This page has been loaded ${count} times`);
+            });
+            document.addEventListener('HTTPDelete', (e) => {
+                console.log('DELETE', e.target.outerHTML);
+            });
+            document.addEventListener('HTTPPut', (e) => {
+                console.log('PUT', e.target.outerHTML)
             });
         </script>
         <script type="module" src="./index.mjs"></script>
@@ -75,13 +88,13 @@
                     customElements.define('click-counter', ClickCounter);
                 </script>
                 <p>
-                    The button has been clicked <click-counter>178</click-counter> times.
+                    The button has been clicked <click-counter>190</click-counter> times.
                 </p>
                 <button action="click-counter" method="put">Increase Counter</button>
             </section>
             <section>
                 <p>
-                    This button has been clicked <span id="click-counter">106</span> times.
+                    This button has been clicked <span id="click-counter">108</span> times.
                 </p>
                 <script>
                     (() => {
@@ -131,6 +144,46 @@
                         <td>jane.doe@example.com</td>
                         <td><button remove="closest" selector="tr">Delete</button></td>
                     </tr>
+                
+                    <tr>
+                        <td>John Smith</td>
+                        <td>johnsmith@example.com</td>
+                        <td><button remove="closest" selector="tr">Delete</button></td>
+                    </tr>
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    
+                
+                    <tr>
+                        <td>foo</td>
+                        <td>foo@example.com</td>
+                        <td><button remove="closest" selector="tr">Delete</button></td>
+                    </tr>
                 </tbody>                
                     <tfoot>
                         <tr>
@@ -149,6 +202,21 @@
                     </tr>
                 </template>
             </section>
+
+            <!---
+            <p>This section should be editable:</p>
+            <section style="border: 1px solid #eee" class="editabledoc" contenteditable="true" patchable="true">T<div>Hello, world</div><div>W</div><div><br></div></section>
+            -->
+
         </section>
-    
+        <script>
+            document.querySelector('table tbody').addEventListener('HTTPPut', (event) => {
+                console.log('In HTTPPut event');
+            });
+            document.querySelectorAll('table tbody').forEach( (e) => {
+                e.addEventListener('HTTPDelete', (event) => {
+                    console.log('In HTTPDelete event');
+                });
+            });
+        </script>
 </body></html>

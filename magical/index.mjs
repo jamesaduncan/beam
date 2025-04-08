@@ -14,6 +14,7 @@ if (window.location.server.DASAware) {
     SelectorSubscriber.subscribe('[patchable]', async ( theElement ) => {
         console.log("found a patchable thing", theElement);
         const observer = new MutationObserver( async( records, observer ) => {        
+            console.log("mutation detected");
             const emr = EnhancedMutationRecord.fromMutationRecord( records );
             const response = await theElement.PATCH( emr );
             console.log(response);

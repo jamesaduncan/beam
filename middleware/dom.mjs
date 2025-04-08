@@ -2,145 +2,14 @@ import { range, responseRange } from "jsr:@oak/commons/range";
 import { typeByExtension } from "jsr:@std/media-types/type-by-extension";
 import { extname } from "jsr:@std/path/extname";
 import * as path from "jsr:@std/path";
-import * as DenoDOM from "jsr:@b-fuze/deno-dom";
 import { JSDOM } from "npm:jsdom"
-import * as Workers from "npm:jsdom-worker";
-import * as vm from 'node:vm'
-
+import * as DenoDOM from "jsr:@b-fuze/deno-dom";
 
 import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
 
-class Storage {
-    constructor() {
-        this.__valuesMap = new Map()
-    }
-
-    getItem(key) {
-        return this.__valuesMap.has(key)
-            ? String(this.__valuesMap.get(String(key)))
-            : null
-    }
-
-    setItem(key, val) {
-        this.__valuesMap.set(String(key), String(val))
-    }
-
-    removeItem(key) {
-      this.__valuesMap.delete(key)
-    }
-
-    clear() {
-      this.__valuesMap.clear()
-    }
-
-    key(i) {
-        if (!arguments.length) {
-            // this is a TypeError implemented on Chrome, Firefox throws Not enough arguments to Storage.key.
-            throw new TypeError(
-            "Failed to execute 'key' on 'Storage': 1 argument required, but only 0 present.",
-            )
-        }
-        return Array.from(this.__valuesMap.keys())[i]
-    }
-
-    get length() {
-        return this.__valuesMap.size
-    }
-
-    set length(val) {}
-}
-
-const getterSetter = instance => ({
-    set: function(obj, prop, value) {
-        if (Storage.prototype.hasOwnProperty(prop)) {
-            instance[prop] = value
-        } else {
-            instance.setItem(prop, value)
-        }
-        return true
-    },
-    get: function(target, name) {
-        if (Storage.prototype.hasOwnProperty(name) || name === '__valuesMap') {
-            return instance[name]
-        }
-        if (instance.__valuesMap.has(name)) {
-            return instance.getItem(name)
-        }
-    },
-})
-
-
-
-const SourceTextModule = vm.SourceTextModule;
-
-const __dirname = path.dirname(new URL(import.meta.url).pathname)
-const ModuleLoader = async (dom) => {
-    class Worker extends dom.window.EventTarget {
-        constructor(url){
-            super()
-            window.fetch(url).then(resp => resp.text())
-            .then(code => {
-                console.log(code)
-            })
-            .catch(e => console.error(e))
-        }
-        postMessage(data){
-            console.log('postmessage', data)
-            this.emit('message', data)
-        }
-        terminate(){
-            console.log('terminating')
-        }
-    }
-    class MediaQueryList extends dom.window.EventTarget {
-        #query
-        constructor(query){
-            super()
-            this.#query = query
-        }
-        get matches(){
-            return true
-        }
-        get media(){
-            return this.#query
-        }
-    }
-    dom.window.matchMedia = query => {
-        return new MediaQueryList(query)
-    }
-    dom.window.Worker = Worker
-    const doc = dom.window.document
-    const url = dom.window.location.href
-    let modules = {}
-    for await (let script of Array.from(doc.querySelectorAll('script[type="module"]'))){
-        let app = new SourceTextModule(`${script.textContent}`, {
-            context: dom.getInternalVMContext()
-        })
-        try{
-            await app.link(async (specifier, referencingModule)=>{
-                let parts = specifier.split('/')
-                let key = parts.slice(parts.length-1)[0]
-                let prop = Object.keys(modules).find(prop => prop.includes(key))
-                let mod = null
-                if(prop) mod = modules[specifier]
-                if(mod) return mod
-                const data = await Deno.readFile(path.join(__dirname, specifier), {encoding: 'utf8'})
-                modules[specifier] = new SourceTextModule(data, {
-                    context: dom.getInternalVMContext()
-                })
-                return modules[specifier]
-            })
-            await app.evaluate()
-        } catch(e){
-            console.error(e)
-        }
-    }
-    return modules
-}
 
 
 /*
-
 To do:
 
     - hold scripts on the server side for each document, so for example, attaching a mutation observer
@@ -172,7 +41,6 @@ Object.defineProperty( Request.prototype, 'selector', {
     }
 });
 
-const localStorage = new Storage();
 const createCustomEvent = (dom, name, opts = {}) => {
     const e = dom.createEvent('HTMLEvents');
     e.detail = opts.detail;
@@ -194,6 +62,8 @@ class DOMServer {
     }
 
     static async readDOM( req, { xpath } = { xpath: false }) {
+        const localStorage = this.localStorage;
+
         const buf = new Uint8Array(req.file.info.size);
         const decoder = new TextDecoder();
         await req.file.handle.read(buf);
@@ -260,6 +130,8 @@ class DOMServer {
 
         const doc = await this.readDOM(req, { xpath: true });
 
+        console.log( emr );
+
         emr.mutate( doc );
 
         this.writeDOM( req, doc )
@@ -281,8 +153,14 @@ class DOMServer {
             const doc = await this.readDOM(req);
 
             const elem = doc.querySelector(selector);                
-            elem.parentNode.removeChild( elem );
-            
+            const parent = elem.parentNode;
+
+            const theEvent = createCustomEvent(doc, 'HTTPDelete', { bubbles: true, cancelable: true, detail: {
+                request: req,
+            }});
+            elem.dispatchEvent(theEvent);
+            parent.removeChild( elem );
+
             this.writeDOM( req, doc );
 
             return new Response(null, {
@@ -313,7 +191,7 @@ class DOMServer {
                 const result = await range(req, req.file.info);
                 if (result.ok) {                
                     try {
-                        const theEvent = createCustomEvent(doc, 'DASDocumentSent', { bubbles: true, cancelable: true, detail: {
+                        const theEvent = createCustomEvent(doc, 'HTTPGet', { bubbles: true, cancelable: true, detail: {
                             request: req,
                         }});
                         doc.dispatchEvent(theEvent);
@@ -371,7 +249,12 @@ class DOMServer {
             const content = await req.text();
             const test    = new DenoDOM.DOMParser().parseFromString( content, "text/html" );
             if ( test ) {
-                doc.querySelector( selector ).outerHTML = content;
+                const theElement = doc.querySelector( selector );
+                theElement.outerHTML = content;
+                const theEvent = createCustomEvent(doc, 'HTTPPut', { bubbles: true, cancelable: true, detail: {
+                    request: req,
+                }});
+                doc.querySelector( selector ).dispatchEvent( theEvent );
             }
 
             const body = docToString( doc );
@@ -393,6 +276,9 @@ export default async function( ctx ) {
     const req = ctx.request;
     const url = new URL(req.url); 
 
+    const mod = await import( this.dom.LocalStorage.module || './dom/localStorage/memory.mjs' );
+    DOMServer.localStorage = await mod.default.createStorage( this.dom.LocalStorage );
+
     try {
         const pathargs = [ this.root, url.pathname ];
         if ( this.index )
@@ -408,7 +294,7 @@ export default async function( ctx ) {
 
         if ( DOMServer[req.method]) {
             try {
-                return DOMServer[ req.method ]( req );
+                return DOMServer[ req.method ]( req, this );
             } catch(e) {
                 console.log(e);
                 return new Response(`<h1>Internal Server Error</h1><p>${e}</p>`, {
