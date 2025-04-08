@@ -16,11 +16,11 @@
                 console.log(`This page has been loaded ${count} times`);
             });
             document.addEventListener('HTTPDelete', (e) => {
-                console.log('DELETE', e.target.outerHTML);
+                console.log('DELETE', e.target.nodeName);
             });
             document.addEventListener('HTTPPut', (e) => {
-                console.log('PUT', e.target.outerHTML)
-            });
+                console.log('PUT', e.target.nodeName)
+            });            
         </script>
         <script type="module" src="./index.mjs"></script>
         <style>
@@ -88,13 +88,13 @@
                     customElements.define('click-counter', ClickCounter);
                 </script>
                 <p>
-                    The button has been clicked <click-counter>190</click-counter> times.
+                    The button has been clicked <click-counter>256</click-counter> times.
                 </p>
                 <button action="click-counter" method="put">Increase Counter</button>
             </section>
             <section>
                 <p>
-                    This button has been clicked <span id="click-counter">108</span> times.
+                    This button has been clicked <span id="click-counter">110</span> times.
                 </p>
                 <script>
                     (() => {
@@ -116,72 +116,10 @@
                             <th type="col">Email</th>
                         </tr>
                     </thead>
-                    <tbody>                
-                        <tr>
-                            <td>John Doe</td>
-                            <td>johndoe@example.com</td>
-                            <td><button remove="closest" selector="tr">Delete</button></td>
-                        </tr>                    
-                    
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
+                    <tbody>
                     <tr>
-                        <td>Jane Doe</td>
-                        <td>jane.doe@example.com</td>
-                        <td><button remove="closest" selector="tr">Delete</button></td>
-                    </tr>
-                
-                    <tr>
-                        <td>John Smith</td>
-                        <td>johnsmith@example.com</td>
-                        <td><button remove="closest" selector="tr">Delete</button></td>
-                    </tr>
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    
-                
-                    <tr>
-                        <td>foo</td>
-                        <td>foo@example.com</td>
+                        <td>James</td>
+                        <td>james@example.com</td>
                         <td><button remove="closest" selector="tr">Delete</button></td>
                     </tr>
                 </tbody>                
@@ -210,13 +148,8 @@
 
         </section>
         <script>
-            document.querySelector('table tbody').addEventListener('HTTPPut', (event) => {
-                console.log('In HTTPPut event');
-            });
-            document.querySelectorAll('table tbody').forEach( (e) => {
-                e.addEventListener('HTTPDelete', (event) => {
-                    console.log('In HTTPDelete event');
-                });
-            });
+            document.querySelector('click-counter').addEventListener('HTTPPut', (e) => {
+                console.log(`click-counter has been changed to ${e.target.textContent}`);
+            })
         </script>
 </body></html>

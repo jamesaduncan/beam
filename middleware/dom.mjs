@@ -247,10 +247,13 @@ class DOMServer {
         if ( selector ) {
             const doc = await this.readDOM( req );
             const content = await req.text();
+            // make sure it is actually a thing
             const test    = new DenoDOM.DOMParser().parseFromString( content, "text/html" );
             if ( test ) {
-                const theElement = doc.querySelector( selector );
-                theElement.outerHTML = content;
+                // somewhat annoyingly, this is a more reliable method than using an actual parser.
+                const detagged = content.replace(/^<([a-zA-Z](.*?[^?])?)>/,'').replace(/(<\/([a-zA-Z](.*?[^?])?)>)$/,'');            
+                const theElement = doc.querySelector( selector );                
+                theElement.innerHTML = detagged
                 const theEvent = createCustomEvent(doc, 'HTTPPut', { bubbles: true, cancelable: true, detail: {
                     request: req,
                 }});

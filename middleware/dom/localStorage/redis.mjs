@@ -1,5 +1,6 @@
 import { connect } from "jsr:@db/redis";
 
+
 // make a connection to the local instance of redis  
 class Storage {
     constructor( connection ) {
@@ -61,7 +62,8 @@ const getterSetter = instance => ({
 
 export default {
     createStorage: async ( configuration ) => {
-        const storage = new Storage( await connect( configuration ) );
+        const redisConnection = await connect( configuration );
+        const storage = new Storage( redisConnection );
         return storage;
     }
 }
