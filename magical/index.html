@@ -2,9 +2,17 @@
 <html lang="en"><head>
         <title>Beam: a DOM-aware webserver</title>
         <script>
-            document.addEventListener('DASDocumentRead', (event) => {
+            document.addEventListener('DASDocumentRead', async (event) => {
                 console.log('DASDocumentRead event being handled');
-            })
+                try {
+                    let count = parseInt( (await window.localStorage.getItem('readcount'))|| 0 );
+                    count = count + 1;
+                    window.localStorage.setItem('readcount', count);
+                    console.log(`This page has been read ${count} times`);
+                } catch(e) {
+                    console.log(e);
+                }
+            });
             document.addEventListener('HTTPGet', async (event) => {
                 console.log("HTTPGet event being handled");
                 let count = parseInt( (await window.localStorage.getItem('count'))|| 0 );
@@ -20,7 +28,7 @@
             });
             document.addEventListener('HTTPPut', (e) => {
                 console.log('PUT', e.target.nodeName)
-            });            
+            });
         </script>
         <script type="module" src="./index.mjs"></script>
         <style>
@@ -88,13 +96,13 @@
                     customElements.define('click-counter', ClickCounter);
                 </script>
                 <p>
-                    The button has been clicked <click-counter>256</click-counter> times.
+                    The button has been clicked <click-counter>2</click-counter> times.
                 </p>
                 <button action="click-counter" method="put">Increase Counter</button>
             </section>
             <section>
                 <p>
-                    This button has been clicked <span id="click-counter">110</span> times.
+                    This button has been clicked <span id="click-counter">1</span> times.
                 </p>
                 <script>
                     (() => {
@@ -122,6 +130,8 @@
                         <td>james@example.com</td>
                         <td><button remove="closest" selector="tr">Delete</button></td>
                     </tr>
+                
+                    
                 </tbody>                
                     <tfoot>
                         <tr>
