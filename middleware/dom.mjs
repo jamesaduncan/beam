@@ -1,13 +1,13 @@
 import { range, responseRange } from "jsr:@oak/commons/range";
-import { typeByExtension } from "jsr:@std/media-types/type-by-extension";
-import { extname } from "jsr:@std/path/extname";
-import * as path from "jsr:@std/path";
 import { JSDOM } from "npm:jsdom"
 import * as DenoDOM from "jsr:@b-fuze/deno-dom";
+import * as BeamUtil from "../beam/utils.mjs"
+import * as path from "jsr:@std/path";
+import { typeByExtension } from "jsr:@std/media-types/type-by-extension";
+import { extname } from "jsr:@std/path/extname";
+
 
 import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
-
-
 
 /*
 To do:
@@ -22,7 +22,6 @@ To do:
     - that same GET should be able to be filtered somehow, to provide only those resources that
     we really want
 */
-
 function docToString(doc) {
     return `<!DOCTYPE ${doc.doctype.name}>\n${doc.documentElement.outerHTML}`;
 }
@@ -50,7 +49,7 @@ const createCustomEvent = (dom, name, opts = {}) => {
 
 class DOMServer {
     static serializeDOM( req, doc ) {
-        const body = `<!DOCTYPE ${doc.doctype.name}>\n${doc.documentElement.outerHTML}`;
+        const body = `<!DOCTYPE ${doc.doctype?.name || 'html'}>\n${doc.documentElement.outerHTML}`;
         const encodedBody = new TextEncoder().encode( body );
         return encodedBody;
     }
@@ -82,7 +81,7 @@ class DOMServer {
         Object.defineProperty(dom.window, "localStorage", {
             value: localStorage
         });
-
+        console.log( dom.window.localStorage )
         const theEvent = createCustomEvent(dom.window.document, 'DASDocumentRead', { bubbles: true, cancelable: true, detail: {
             request: req,
         }});
@@ -251,7 +250,7 @@ class DOMServer {
             const test    = new DenoDOM.DOMParser().parseFromString( content, "text/html" );
             if ( test ) {
                 // somewhat annoyingly, this is a more reliable method than using an actual parser.
-                const detagged = content.replace(/^<([a-zA-Z](.*?[^?])?)>/,'').replace(/(<\/([a-zA-Z](.*?[^?])?)>)$/,'');            
+                const detagged = content.replace(/(^<([a-zA-Z]+)[^>]*>)|(<\/\2>$)/,'');
                 const theElement = doc.querySelector( selector );                
                 theElement.innerHTML = detagged
                 const theEvent = createCustomEvent(doc, 'HTTPPut', { bubbles: true, cancelable: true, detail: {
@@ -279,10 +278,15 @@ export default async function( ctx ) {
     const req = ctx.request;
     const url = new URL(req.url); 
 
-    const mod = await import( this.dom.LocalStorage.module || './dom/localStorage/memory.mjs' );
-    DOMServer.localStorage = await mod.default.createStorage( this.dom.LocalStorage );
+    const localStorage = this.dom?.LocalStorage || { module: './dom/localStorage/memory.mjs' }
+    const mod = await import( localStorage.module );
+    DOMServer.localStorage = await mod.default.createStorage( this.dom?.LocalStorage || {} );
+    console.log( DOMServer.localStorage );
+
 
     try {
+        //req.file = await BeamUtil.default.fileForContext( this, ctx );
+        //console.log( req.file )
         const pathargs = [ this.root, url.pathname ];
         if ( this.index )
             if ( url.pathname.split().pop() == '/') pathargs.push(this.index);
