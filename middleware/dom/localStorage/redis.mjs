@@ -42,36 +42,10 @@ class Storage {
     set length(val) {}
 }
 
-/*
-const getterSetter = instance => ({
-    set: function(obj, prop, value) {
-        if (Storage.prototype.hasOwnProperty(prop)) {
-            instance[prop] = value
-        } else {
-            instance.setItem(prop, value)
-        }
-        return true
-    },
-    get: function(target, name) {
-        if (Storage.prototype.hasOwnProperty(name) || name === '__valuesMap') {
-            return instance[name]
-        }
-        if (instance.__valuesMap.has(name)) {
-            return instance.getItem(name)
-        }
-    },
-})
-    */
-
 export default {
     createStorage: async ( configuration ) => {
         const redisConnection = await connect( configuration );
         const storage = new Storage( redisConnection );
-        /*
-        const restartCount = parseInt(await storage.getItem('restartCount') || 0) + 1;
-        storage.setItem('restartCount', restartCount)
-        console.log( `restart count is ${restartCount}`)
-        */
         return storage;
     }
 }

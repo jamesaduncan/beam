@@ -81,7 +81,6 @@ class DOMServer {
         Object.defineProperty(dom.window, "localStorage", {
             value: localStorage
         });
-        console.log( dom.window.localStorage )
         const theEvent = createCustomEvent(dom.window.document, 'DASDocumentRead', { bubbles: true, cancelable: true, detail: {
             request: req,
         }});
@@ -128,8 +127,6 @@ class DOMServer {
         const emr = EnhancedMutationRecord.fromJSON( emrJSON );
 
         const doc = await this.readDOM(req, { xpath: true });
-
-        console.log( emr );
 
         emr.mutate( doc );
 
@@ -281,12 +278,8 @@ export default async function( ctx ) {
     const localStorage = this.dom?.LocalStorage || { module: './dom/localStorage/memory.mjs' }
     const mod = await import( localStorage.module );
     DOMServer.localStorage = await mod.default.createStorage( this.dom?.LocalStorage || {} );
-    console.log( DOMServer.localStorage );
-
 
     try {
-        //req.file = await BeamUtil.default.fileForContext( this, ctx );
-        //console.log( req.file )
         const pathargs = [ this.root, url.pathname ];
         if ( this.index )
             if ( url.pathname.split().pop() == '/') pathargs.push(this.index);
