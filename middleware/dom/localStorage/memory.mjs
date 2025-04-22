@@ -4,12 +4,14 @@ class Storage {
     }
 
     getItem(key) {
+        console.log('in memory getItem');
         return this.__valuesMap.has(key)
             ? String(this.__valuesMap.get(String(key)))
             : null
     }
 
     setItem(key, val) {
+        console.log('in memory set item');
         this.__valuesMap.set(String(key), String(val))
     }
 

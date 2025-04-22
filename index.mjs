@@ -107,6 +107,7 @@ class VirtualHost {
                 const response = await modules[i].default.apply( this, [ context ]);
                 if ( response instanceof Response ) {
                     context.response = response;
+                    break;
                 }
             } catch (e) {
                 return new Response(`<h1>Internal Server Error<h1><p>${e}</p>`, { status: 500, headers: {

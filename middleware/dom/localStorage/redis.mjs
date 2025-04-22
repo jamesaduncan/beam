@@ -4,24 +4,25 @@ import { connect } from "jsr:@db/redis";
 // make a connection to the local instance of redis  
 class Storage {
     constructor( connection ) {
-        this.__valuesMap = connection
+        this._connection = connection
     }
 
-    getItem(key) {
-        const answer = this.__valuesMap.get(key);
+    async getItem(key) {
+        const answer = await this._connection.get(String(key));
         return answer;
     }
 
-    setItem(key, val) {
-        const answer = this.__valuesMap.set(String(key), String(val))
+    async setItem(key, val) {
+        const answer = await this._connection.set(String(key), String(val));
+        return answer;
     }
 
     removeItem(key) {
-      this.__valuesMap.delete(key)
+      this._connection.delete(key)
     }
 
     clear() {
-      this.__valuesMap.clear()
+      this._connection.clear()
     }
 
     key(i) {
@@ -31,16 +32,17 @@ class Storage {
             "Failed to execute 'key' on 'Storage': 1 argument required, but only 0 present.",
             )
         }
-        return Array.from(this.__valuesMap.keys())[i]
+        return Array.from(this._connection.keys())[i]
     }
 
     get length() {
-        return this.__valuesMap.size
+        return this._connection.size
     }
 
     set length(val) {}
 }
 
+/*
 const getterSetter = instance => ({
     set: function(obj, prop, value) {
         if (Storage.prototype.hasOwnProperty(prop)) {
@@ -59,11 +61,17 @@ const getterSetter = instance => ({
         }
     },
 })
+    */
 
 export default {
     createStorage: async ( configuration ) => {
         const redisConnection = await connect( configuration );
         const storage = new Storage( redisConnection );
+        /*
+        const restartCount = parseInt(await storage.getItem('restartCount') || 0) + 1;
+        storage.setItem('restartCount', restartCount)
+        console.log( `restart count is ${restartCount}`)
+        */
         return storage;
     }
 }

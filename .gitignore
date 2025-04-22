@@ -1,5 +1,7 @@
 ttsb*
+workstream*
 launch.json
+.auth.conf
 
 # Logs
 logs
