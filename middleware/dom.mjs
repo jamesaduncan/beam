@@ -244,16 +244,19 @@ class DOMServer {
             const doc = await this.readDOM( req );
             const content = await req.text();
             // make sure it is actually a thing
-            const test    = new DenoDOM.DOMParser().parseFromString( content, "text/html" );
+            const test = new DenoDOM.DOMParser().parseFromString( content, "text/html" );
             if ( test ) {
                 // somewhat annoyingly, this is a more reliable method than using an actual parser.
                 const detagged = content.replace(/(^<([a-zA-Z]+)[^>]*>)|(<\/\2>$)/,'');
-                const theElement = doc.querySelector( selector );                
-                theElement.innerHTML = detagged
+                const theElement = doc.querySelector( selector );
+                const closestWithACL = theElement.closest('[acl-put]');
+                theElement.innerHTML = detagged;
                 const theEvent = createCustomEvent(doc, 'HTTPPut', { bubbles: true, cancelable: true, detail: {
                     request: req,
                 }});
                 doc.querySelector( selector ).dispatchEvent( theEvent );
+            } else {
+                console.log("parse failed.");
             }
 
             const body = docToString( doc );
@@ -294,6 +297,7 @@ export default async function( ctx ) {
 
         if ( DOMServer[req.method]) {
             try {
+                console.log(`${req.method} ${req.url}`);
                 return DOMServer[ req.method ]( req, this );
             } catch(e) {
                 console.log(e);
