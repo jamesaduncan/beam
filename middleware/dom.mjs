@@ -1,11 +1,8 @@
 import { range, responseRange } from "jsr:@oak/commons/range";
 import { JSDOM } from "npm:jsdom"
-import * as DenoDOM from "jsr:@b-fuze/deno-dom";
-import * as BeamUtil from "../beam/utils.mjs"
-import * as path from "jsr:@std/path";
-import { typeByExtension } from "jsr:@std/media-types/type-by-extension";
-import { extname } from "jsr:@std/path/extname";
+import { fileForContext } from "../beam/utils.mjs";
 
+import * as DenoDOM from "jsr:@b-fuze/deno-dom";
 
 import EnhancedMutationRecord from "https://jamesaduncan.github.io/dom-mutation-record/index.mjs";
 
@@ -283,17 +280,7 @@ export default async function( ctx ) {
     DOMServer.localStorage = await mod.default.createStorage( this.dom?.LocalStorage || {} );
 
     try {
-        const pathargs = [ this.root, url.pathname ];
-        if ( this.index )
-            if ( url.pathname.split().pop() == '/') pathargs.push(this.index);
-
-        req.file = {
-            name: path.join( ...pathargs )
-        }
-        req.file.handle = await Deno.open( req.file.name );
-        req.file.mimetype = typeByExtension( extname( req.file.name ))
-
-        req.file.info   = await req.file.handle.stat();
+        await fileForContext(this, ctx);
 
         if ( DOMServer[req.method]) {
             try {

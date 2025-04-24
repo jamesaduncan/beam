@@ -3,42 +3,38 @@ import { typeByExtension } from "jsr:@std/media-types/type-by-extension";
 import { extname } from "jsr:@std/path/extname";
 import * as path from "jsr:@std/path";
 
+import { fileForContext } from "../beam/utils.mjs";
+
+
 /*
     this is derived from https://jsr.io/@oak/commons/doc/range for the time being
 */
 export default async function( ctx ) {
-    console.log("in static handler");
     const req = ctx.request;
     const url = new URL(req.url); 
     try {
-        const pathargs = [ this.root, url.pathname ];
-
-        if ( this.index )
-            if ( url.pathname.split().pop() == '/') pathargs.push(this.index);
-
-        const file = await Deno.open( path.join( ...pathargs ) );
-        const fileInfo = await file.stat();
+        const file = await fileForContext( this, ctx );
         const headers = { "accept-ranges": "bytes", "content-type": typeByExtension( extname( url.pathname  )) };
         if (req.method === "HEAD") {
             return new Response(null, {
                 headers: {
                 ...headers,
-                "content-length": String(fileInfo.size),
+                "content-length": String(file.info.size),
                 },
             });
         }
         if (req.method === "GET") {
-            const result = await range(req, fileInfo);
+            const result = await range(req, file.info);
             if (result.ok) {
                 if (result.ranges) {
-                    return responseRange(file, fileInfo.size, result.ranges, {
+                    return responseRange(file, file.info.size, result.ranges, {
                         headers,
                     }, { type });
                 } else {
-                    return new Response(file.readable, {
+                    return new Response(file.handle.readable, {
                         headers: {
                             ...headers,
-                            "content-length": String(fileInfo.size),
+                            "content-length": String(file.info.size),
                         },
                     });
                 }
