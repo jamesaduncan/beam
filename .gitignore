@@ -133,5 +133,5 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
-dump.rdb
-dump.rdb
+
+*.rdb
