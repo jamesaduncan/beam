@@ -57,7 +57,7 @@ class DOMServer {
         Deno.writeFile( req.file.name, encodedBody )
     }
 
-    static async readDOM( req, { xpath } = { xpath: false }) {
+    static async readDOM( req, config, context ) {
         const localStorage = this.localStorage;
 
         const buf = new Uint8Array(req.file.info.size);
@@ -72,9 +72,10 @@ class DOMServer {
             resources: "usable",
             pretendToBeVisual: true
         });
-        //const modules = await ModuleLoader(dom)
-        /* handle the localStorage stuff */
-        dom.window.localStorage = localStorage;
+        /* copy some data in to the session */
+        if ( context.user ) {
+            dom.window.sessionStorage.setItem("user", context.user);
+        }
         Object.defineProperty(dom.window, "localStorage", {
             value: localStorage
         });
@@ -95,7 +96,7 @@ class DOMServer {
         return headers;
     }
 
-    static async HEAD( req ) {
+    static async HEAD( req, config, context ) {
         const headers = this.prepareHeaders( req );
         return new Response(null, {
             headers: {
@@ -105,7 +106,7 @@ class DOMServer {
         });        
     }
 
-    static async OPTIONS( req ) {
+    static async OPTIONS( req, config, context ) {
         const headers = this.prepareHeaders( req );
         const response =  new Response(null, {
             status: 200,
@@ -117,13 +118,13 @@ class DOMServer {
         return response;
     }
 
-    static async PATCH( req ) {
+    static async PATCH( req, config, context ) {
         const headers = this.prepareHeaders( req );
 
         const emrJSON = await req.text();
         const emr = EnhancedMutationRecord.fromJSON( emrJSON );
 
-        const doc = await this.readDOM(req, { xpath: true });
+        const doc = await this.readDOM(req, config, context);
 
         emr.mutate( doc );
 
@@ -138,12 +139,12 @@ class DOMServer {
         });
     }
 
-    static async DELETE( req ) {
+    static async DELETE( req, config, context ) {
         const headers = this.prepareHeaders(req);
 
         const selector = req.selector;
         if ( selector ) {
-            const doc = await this.readDOM(req);
+            const doc = await this.readDOM(req, config, context);
 
             const elem = doc.querySelector(selector);                
             const parent = elem.parentNode;
@@ -155,7 +156,7 @@ class DOMServer {
             parent.removeChild( elem );
 
             this.writeDOM( req, doc );
-
+            
             return new Response(null, {
                 status: 204,
                 statusText: 'No Content',
@@ -166,11 +167,11 @@ class DOMServer {
         }                                 
     }
 
-    static async GET( req ) {
+    static async GET( req, config, context ) {
         const headers = this.prepareHeaders( req );
         const selector = req.selector
         if ( selector ) {
-            const doc = await this.readDOM(req)
+            const doc = await this.readDOM(req, config, context)
             const node = doc.querySelector( selector );
             return new Response(new TextEncoder().encode( node.outerHTML ), {
                 headers: {
@@ -180,7 +181,7 @@ class DOMServer {
             })
         } else {
             if ( req.file.mimetype === 'text/html' ) {            
-                const doc = await this.readDOM(req)
+                const doc = await this.readDOM(req, config, context)
                 const result = await range(req, req.file.info);
                 if (result.ok) {                
                     try {
@@ -192,7 +193,7 @@ class DOMServer {
                         console.log("couldn't dispatch event: ", e);
                     }                                
                     if (result.ranges) {
-                        const body = this.serializeDOM( req, doc )
+                        const body = this.serializeDOM( req, doc );
                         return responseRange(body, req.file.info.size, result.ranges, {
                             headers,
                         }, { type });
@@ -233,12 +234,12 @@ class DOMServer {
         }
     }
 
-    static async PUT( req ) {
+    static async PUT( req, config, context ) {
         const headers = this.prepareHeaders( req );
 
         const selector = req.selector;
         if ( selector ) {
-            const doc = await this.readDOM( req );
+            const doc = await this.readDOM( req, config, context );
             const content = await req.text();
             // make sure it is actually a thing
             const test = new DenoDOM.DOMParser().parseFromString( content, "text/html" );
@@ -284,10 +285,9 @@ export default async function( ctx ) {
 
         if ( DOMServer[req.method]) {
             try {
-                console.log(`${req.method} ${req.url}`);
-                return DOMServer[ req.method ]( req, this );
+                return DOMServer[ req.method ]( req, this, ctx );
             } catch(e) {
-                console.log(e);
+                console.log("error: ", e);
                 return new Response(`<h1>Internal Server Error</h1><p>${e}</p>`, {
                     status:500,
                     statusText: 'Internal Server Error'

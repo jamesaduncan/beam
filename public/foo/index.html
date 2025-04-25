@@ -1,1 +1,17 @@
-<h1>James should have access to this</h1>
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>
+            DAS Server Basic Auth test
+        </title>
+    </head>
+    <body>
+        <h1>James should have access to this</h1>
+        <h1>John should have access to this</h1>
+        <script>
+            window.addEventListener("DASDocumentRead", () => {
+                console.log( `user is`, sessionStorage.getItem('user') );
+            });
+        </script>
+    </body>
+</html>

@@ -11,6 +11,7 @@ class User {
     constructor( { username, groups } = { username: '', groups: [] } ) {
         this.username = username;
         this.groups = groups;
+        this.groups.push( 'everybody' )
     }
 
     toString() {
@@ -98,17 +99,33 @@ class Authorization {
         return authDetails;
     }
 
-    static checkAllowances( filename, allowances ) {
-        console.log(`in checkAllowances`);
-        const matchingKey = Object.keys( allowances ).find( (a) => {
-            console.log( `checking ${a} against ${filename} `)
-            return (a == filename);
-        });
-        if ( matchingKey ) {
-            return allowances[ matchingKey ]
-        } else {            
-            return this.checkAllowances( path.join(...filename.split(path.SEPARATOR_PATTERN).slice(0, -1)), allowances );
+    static composeAllowances( filename, allowances ) {
+        //console.log(`in checkAllowances`, allowances);
+        let mergedAllowances = {};
+        Object.keys( allowances ).forEach ( (a) => {
+            if ( filename.match(`^${a}`) ) {
+                //console.log(`comparing ${filename} to '^${a}'... yes`)
+                mergedAllowances = merge.withOptions( { arrayMergeStrategy: 'replace' }, mergedAllowances, allowances[a] );
+            } else {
+                //console.log(`comparing ${filename} to '^${a}'... no`)
+            }
+        })
+        //console.log( `mergedAllowances: `, mergedAllowances )
+        return mergedAllowances;
+    }
+
+    static checkAllowance( context, composedAllowance, userOrGroupname ) {
+        if (!composedAllowance[ userOrGroupname ]) {
+            return false;
+        } else {
+            // ok, is this just true, or are we allowing some methods and not others
+            const usersAllowance = composedAllowance[ userOrGroupname ];
+            if ( typeof( usersAllowance ) != 'boolean') {
+                if ( !usersAllowance.includes( context.request.method ) ) return false;
+            }
         }
+        
+        return true;
     }
 
     static async authorized(config, context, user) {
@@ -118,18 +135,21 @@ class Authorization {
             allowances = await this.processAuthfile(config, path, allowances);
         }
 
+        /*
         console.log( `File is`, context.request.file.name)
         console.log( `Allowances are`, allowances )
         console.log( `User is`, user )
+        */
 
         const fail = this.fail( config, context, user );
-        const applicableAllowance = this.checkAllowances( context.request.file.name, allowances );
+        const applicableAllowance = this.composeAllowances( context.request.file.name, allowances );
+        //console.log("Found applicable allowance:", applicableAllowance);
         if ( !user && Object.keys(applicableAllowance) ) {
             return fail;
         } else if ( user && Object.keys( applicableAllowance ) ) {
-            if ( applicableAllowance[ user.username ] != true ) return fail;
+            if ( !this.checkAllowance( context, applicableAllowance, user.username )) return false;
         }
-        console.log("Authorization is good");
+        //console.log("Authorization is good");
     }
 
     static fail(config, context, user) {
@@ -146,9 +166,7 @@ class Authorization {
 export default async function( ctx ) {
     const req = ctx.request;
     const url = new URL(req.url); 
-    console.log( `request for ${url}`)
-    const user = await Authentication.authenticate( this, ctx );
-
-    return await Authorization.authorized( this, ctx, user );
+    ctx.user = await Authentication.authenticate( this, ctx );
+    return await Authorization.authorized( this, ctx, ctx.user );
 };
 

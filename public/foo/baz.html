@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Test File</title>
+</head>
+<body>
+<h1>James should only be able to GET this file: <span id="status"></span></h1>
+<h1>John should not have access to this.</h1>
+<script type="module">
+const response = await fetch(window.location.href, { method: "PUT" } );
+if ( !response.ok ) {
+    document.querySelector("#status").innerHTML = "ok";
+} else {
+    document.querySelector("#status").innerHTML = "failed";
+}
+</script>
+</body>
+</html>
