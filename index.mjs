@@ -47,6 +47,7 @@ class Beam {
             const className = constructorData.class;
             const theClass  = this.classes[ className ];
             this.configuration.VirtualHost[key] = new theClass(constructorData);
+            this.configuration.VirtualHost[key].middleware() // get it set up
         })
 
         /* process any virtualhost synonyms */
@@ -92,7 +93,11 @@ class VirtualHost {
         if ( this._cached_pipeline_) {
             return this._cached_pipeline_;
         } else {
-            return this._cached_pipeline_ ||= (await Promise.all( this.pipeline.map( async ( e ) => { return import(e) } ) ));
+            return this._cached_pipeline_ ||= (await Promise.all( this.pipeline.map( async ( e ) => { return import(e) } ) )).map( e => { 
+                if ( e.default.setup )
+                    e.default.setup( this );
+                return e; 
+            });
         }
     }
 
