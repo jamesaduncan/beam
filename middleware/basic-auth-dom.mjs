@@ -48,7 +48,6 @@ class Authenticator {
             const decoder = new TextDecoder();
             const [ username, password ]  = decoder.decode( decodeBase64( auth ) ).split(':');
             try {
-                console.log(`authenticating ${username}:${password}`);
                 const user = await this.dom.window.User.authenticate(username, password);
 
                 if ( req.method === 'OPTIONS') {
