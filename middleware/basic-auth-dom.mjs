@@ -39,32 +39,39 @@ class Authenticator {
     async authenticate( context ) {
         const req = context.request;
         const url = new URL(req.url);
+
+        if ( req.method === 'OPTIONS') { // really, this should check what this user can do, and only return it.
+            return true;
+        }
+
+        let username = "";
+        let password = "";
         const authHeader = req.headers.get('Authorization');
         if (!authHeader) {
-            return null;
-        }
-        const [type, auth] = authHeader.split(' ');
-        if ( type === 'Basic') {
-            const decoder = new TextDecoder();
-            const [ username, password ]  = decoder.decode( decodeBase64( auth ) ).split(':');
-            try {
-                const user = await this.dom.window.User.authenticate(username, password);
-
-                if ( req.method === 'OPTIONS') {
-                    return true;
+            console.log("No authorization header, ignoring");
+        } else {
+            if ( authHeader ) {
+                const [type, auth] = authHeader.split(' ');
+                if ( type === 'Basic' ) {       
+                    [ username, password ]  = ( new TextDecoder() ).decode( decodeBase64( auth ) ).split(':');
                 }
-
-                if ( user.can(context.request.method, url.pathname.slice(1) )) {
-                    console.log('user can!')
-                    return user;
-                } else {
-                    console.log(`${req.method} ${user.username} cannot ${req.url}`);
-                    return false;
-                }
-            } catch(e) {
-                console.log("got an error... weird...",e);
             }
         }
+
+        if ( this.dom.window.User.can(username, context.request.method, url.pathname) ) {
+            console.log(`${username} can ${url.pathname}`);
+
+            // this user can do it, if it's a valid user.            
+            const user = await this.dom.window.User.authenticate(username, password);
+            if ( user ) return user;
+        }
+        
+        // ok, so we do have a user but we "can't" so we need to check groups, and then finally we need to check the "everybody" group
+        return this.dom.window.User.groupsFor( username ).reduceRight( (truth, groupname) => {
+            console.log(`checking to see if ${groupname} has access to ${context.request.method} ${url.pathname}`);
+            truth = this.dom.window.User.can(groupname, context.request.method, url.pathname);
+            return truth;
+        }, false);            
     }
 }
 

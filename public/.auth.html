@@ -2,6 +2,12 @@
 <html><head>
         <title>Authorization</title>
         <script type="module" src="/magical.mjs"></script>
+        <style>
+            span.input {
+                min-width: 5em;
+                display: inline-block;
+            }
+        </style>
         <script>
 
             class PasswordHasher {
@@ -35,14 +41,6 @@
                 return obj;
             }
 
-            HTMLTableRowElement.prototype.toJSON = function toJSON( headers = [] ) {
-                if ( headers.length ) {
-                    // we have header names so we'll make an object
-                } else {
-
-                }
-            }
-
             HTMLTableElement.prototype.toJSON = function toJSON() {
                 const headerRow = this.querySelector('thead tr');
                 const headers = [];
@@ -56,38 +54,66 @@
 
             class User {
 
-                static guest() {
-                    const user = new this();
-                    user.username = 'everybody';
-                    return user;
+                /* Class method "groupsFor" returns an array; */
+                static groupsFor( aUser = "" ) {
+                    const groups = ['everybody']
+                    if (aUser === "" ) {
+                        return groups
+                    } else {
+                        const tableBody = document.querySelector('table.groups tbody');
+                        if (tableBody) {
+                            const rows = Array.from( tableBody.rows );
+                            for ( const row of rows ) {
+                                const columns = Array.from( row.cells );
+                                const lookfor = columns.slice(1).find( (e) => { 
+                                    const input = e.querySelector('.input');
+                                    if (input) {
+                                        return input.innerHTML === aUser
+                                    } else return false;
+                                });
+                                if ( lookfor ) groups.push( columns[0].innerHTML ) // the find was successful
+                            }
+                        }
+
+                        return groups;
+                    }
                 }
 
                 static async authenticate( username, password ) {   
                     const userTable = document.querySelector('table.users');
                     const tableObject = userTable.toJSON();
                     const userRow = document.querySelector('table.users').toJSON().find( (a) => a.Username.innerHTML === username );
-                    const result = await PasswordHasher.verify(password, userRow.Password.innerHTML);
-                    if ( result ) {
-                        const user = new User();
-                        user.username = username;
-                        return user;
+                    if ( userRow ) {
+                        const result = await PasswordHasher.verify(password, userRow.Password.innerHTML);
+                        if ( result ) {
+                            const user = new User();
+                            user.username = username;
+                            return user;
+                        }
                     }
                     return false;
                 }
 
-                can(aMethod, aPath, aSelector = "") {
+                static can( aUsername = "", aMethod = "GET", aPath = "/", aSelector = "" ) {
                     const pathDetails = document.querySelector("table.acl").toJSON();
 
-                    const pathRow = pathDetails.find( (a) => {                        
-                        const result = (a.Path.innerHTML === aPath && a.Entity.innerHTML === this.username && a.Selector.innerHTML === aSelector)
-                        //console.log(`checking for '${aPath}'', '${this.username}' & '${aSelector}' against '${a.Path.innerHTML}', '${a.Entity.innerHTML}' & '${a.Selector.innerHTML}': ${result}`);
+                    const pathRow = pathDetails.find( (a) => {                       
+                        const result = (a.Path.innerHTML === aPath && a.Entity.innerHTML === aUsername && a.Selector.innerHTML === aSelector)
                         return result;
                     });
 
-                    if ( pathRow && pathRow[aMethod] )
+                    if ( pathRow && pathRow[aMethod] ) {
                         return pathRow[aMethod].querySelector('input').checked;
+                    } else if (!pathRow && aPath != "*") {
+                        console.log(`There was no entry, for ${aUsername} ${aMethod} so checking default allowances`);
+                        return this.can( aUsername, aMethod, "*", aSelector )
+                    }
 
                     return false;
+                }
+
+                can(aMethod, aPath, aSelector = "") {
+                    return this.constructor.can( this.username, ...arguments);
                 }
 
                 selectors( aMethod, aPath ) {
@@ -144,12 +170,6 @@
                         this.hashed = result;
                         this.internals.setFormValue( this.hashed );
                     })
-/*
-                    TwinBcrypt.hash(aValue, 11, null, ( result ) => {
-                        this.hashed = result;
-                        this.internals.setFormValue(this.hashed);
-                    });
-                    */
                 }
 
                 static get observedAttributes() {
@@ -218,7 +238,6 @@
                     <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
                 </tr>
             </template>
-
             
             <table class="users" border="1">
                 <caption>This table contains the users and their login credentials</caption>
@@ -235,9 +254,12 @@
                         <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
                     </tr>
                 
-                
             
-                
+                <tr>
+                    <td>ben</td>
+                    <td>lrfEkQq4r2V1WfISvnzb/jOrRbjGggZoTMua0ncBLl8=</td>
+                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
+                </tr>
             </tbody>
                 <tfoot>
                     <tr>
@@ -250,6 +272,24 @@
         </section>
 
         <section>
+            <template id="group-column-template">
+                <td>
+                    <span contenteditable="true" class="input"></span>
+                    <button method="delete" remove="closest" selector="td">x</button>
+                </td>
+            </template>
+
+            <form id="group-row" method="put" action="table.groups tbody" template="template#group-row-template"></form>
+            <template id="group-row-template">
+                <tr method="put">
+                    <td contenteditable="true"><slot name="groupname">(group name goes here)</slot></td>
+                    <td>
+                        <button class="add-group">Add member</button>
+                        <button remove="closest" selector="tr">Delete Group</button>
+                    </td>                    
+                </tr>
+            </template>
+
             <table class="groups" border="1">
                 <caption>This table maps groups to the members of that group</caption>
                 <thead>
@@ -259,18 +299,61 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr contenteditable="true" method="put">
-                        <td>administrators</td>
-                        <td>james</td>
+                    <tr method="put">
+                        <td contenteditable="true">administrators</td>
+                        <td>
+                        <span contenteditable="true" class="input">james</span>
+                        <button method="delete" remove="closest" selector="td">x</button>
+                    </td>
+                    <td>
+                        <button class="add-group">Add member</button>
+                        <button remove="closest" selector="tr">Delete Group</button>
+                    </td>                    
                     </tr>
-                    <tr contenteditable="true" method="put">
-                        <td>workers</td>
-                        <td>james <button contenteditable="false" method="delete" remove="closest" selector="td">x</button></td>
-                        <td>ben <button contenteditable="false" method="delete" remove="closest" selector="td">x</button></td>
-                        <td><button>+</button></td>
+                
+                <tr method="put">
+                    <td contenteditable="true">workers</td>
+                    <td>
+                    <span contenteditable="true" class="input">ben</span>
+                    <button method="delete" remove="closest" selector="td">x</button>
+                </td><td>
+                    <span contenteditable="true" class="input">james</span>
+                    <button method="delete" remove="closest" selector="td">x</button>
+                </td><td>
+                        <button class="add-group">Add member</button>
+                        <button remove="closest" selector="tr">Delete Group</button>
+                    </td>                    
+                </tr>
+            
+                <tr method="put">
+                    <td contenteditable="true">miners</td>
+                    <td>
+                    <span contenteditable="true" class="input">ben</span>
+                    <button method="delete" remove="closest" selector="td">x</button>
+                </td><td>
+                        <button class="add-group">Add member</button>
+                        <button remove="closest" selector="tr">Delete Group</button>
+                    </td>                    
+                </tr>
+            </tbody>
+                <tfoot>
+                    <tr>
+                        <td><input form="group-row" type="text" name="groupname" placeholder="Group name..."></td>
+                        <td><button form="group-row">Add Group</button></td>
                     </tr>
-                </tbody>
+                </tfoot>
             </table>
+            <script type="module">
+                import SelectorSubscriber from "https://jamesaduncan.github.io/selector-subscriber/index.mjs";
+                SelectorSubscriber.subscribe('button.add-group', (theButton) => {
+                    theButton.addEventListener('click', () => {
+                                        const clone = document.querySelector('template#group-column-template').content.firstElementChild.cloneNode(true);
+                                        console.log( clone )
+                                        theButton.parentNode.insertAdjacentElement('beforebegin', clone)
+                                    });
+                });
+            </script>
+            
         </section>
 
         <section>
@@ -289,131 +372,59 @@
                     </tr>
                 </thead>
                 <tbody>
+            
                     <tr method="put" contenteditable="true">
-                        <td>bar.html</td>
-                        <td>james</td>
-                        <td></td>
-                        <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                        <td contenteditable="false"><input type="checkbox" checked=""></td>
-                        <td contenteditable="false"><input type="checkbox" checked=""></td>
-                        <td contenteditable="false"><input type="checkbox" checked=""></td>
-                        <td contenteditable="false"><input type="checkbox" checked=""></td>
-                        <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                    </tr>
-                    <tr method="put" contenteditable="true">
-                        <td>bar.html</td>
+                        <td>*</td>
                         <td>everybody</td>
                         <td></td>
                         <td contenteditable="false"><input type="checkbox" checked="true"></td>
                         <td contenteditable="false"><input type="checkbox"></td>
                         <td contenteditable="false"><input type="checkbox"></td>
                         <td contenteditable="false"><input type="checkbox"></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
+                        <td contenteditable="false"><input type="checkbox"></td>                    
                         <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
                     </tr>
+                
                     <tr method="put" contenteditable="true">
-                        <td>baz.html</td>
-                        <td>john</td>
+                        <td>*</td><td>administrators</td>
                         <td></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
+                        <td contenteditable="false"><input type="checkbox" checked="true"></td>
+                        <td contenteditable="false"><input type="checkbox" checked="true"></td>
+                        <td contenteditable="false"><input type="checkbox" checked="true"></td>
+                        <td contenteditable="false"><input type="checkbox" checked="true"></td>
+                        <td contenteditable="false"><input type="checkbox" checked="true"></td>                    
                         <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                    </tr>
-                    <tr method="put" contenteditable="true">
-                        <td>baz.html</td>
+                    </tr>                    
+
+                <tr method="put" contenteditable="true">
+                        <td>/.auth.html</td>
                         <td>james</td>
                         <td></td>
                         <td contenteditable="false"><input type="checkbox" checked=""></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
-                        <td contenteditable="false"><input type="checkbox"></td>
+                        <td contenteditable="false"><input type="checkbox" checked=""></td>
+                        <td contenteditable="false"><input type="checkbox" checked=""></td>
+                        <td contenteditable="false"><input type="checkbox" checked=""></td>
+                        <td contenteditable="false"><input type="checkbox" checked=""></td>
                         <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                    </tr>            
-                
+                    </tr>
             
                 <tr method="put" contenteditable="true">
-                    <td>.auth.html</td>
+                    <td>/magical.mjs</td>
+                    <td>james</td>
+                    <td></td>
+                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
+                    <td contenteditable="false"><input type="checkbox"></td>
+                    <td contenteditable="false"><input type="checkbox"></td>
+                    <td contenteditable="false"><input type="checkbox"></td>
+                    <td contenteditable="false"><input type="checkbox"></td>                    
+                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
+                </tr>
+            
+                <tr method="put" contenteditable="true">
+                    <td>/.auth.html</td>
                     <td>everybody</td>
                     <td></td>
                     <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>                    
-                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                </tr>
-            
-                <tr method="put" contenteditable="true">
-                    <td>.auth.html</td>
-                    <td>james</td>
-                    <td>table.acl</td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>                    
-                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                </tr>
-            
-                
-            
-                <tr method="put" contenteditable="true">
-                    <td>.auth.html</td>
-                    <td>james</td>
-                    <td>table.users</td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>                    
-                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                </tr>
-            
-                <tr method="put" contenteditable="true">
-                    <td>index.html</td>
-                    <td>everybody</td>
-                    <td></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>                    
-                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                </tr>
-            
-                <tr method="put" contenteditable="true">
-                    <td>.auth.html</td>
-                    <td>everybody</td>
-                    <td></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>                    
-                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                </tr>
-            
-                <tr method="put" contenteditable="true">
-                    <td>.auth.html</td>
-                    <td>james</td>
-                    <td></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>                    
-                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                </tr>
-            
-                <tr method="put" contenteditable="true">
-                    <td>magical.mjs</td>
-                    <td>james</td>
-                    <td></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
                     <td contenteditable="false"><input type="checkbox"></td>
                     <td contenteditable="false"><input type="checkbox"></td>
                     <td contenteditable="false"><input type="checkbox"></td>
