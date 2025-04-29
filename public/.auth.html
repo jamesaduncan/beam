@@ -10,6 +10,100 @@
         </style>
         <script>
 
+            const Site = new Proxy({}, {
+                get( target, prop, receiver ) {
+                    const siteDetails = document.querySelector('table.site').toJSON();
+                    const entry = siteDetails.find( (a) => {
+                        const result = (prop == a.Setting.innerHTML)
+                        return result;
+                    });
+                    return entry.Value.innerHTML;
+                }
+            });
+
+            class Page {
+
+                #acl;
+
+                constructor( url ) {
+                    this.url = url;                    
+                }
+                
+                static protected( aURL ) {                    
+                    if ( String(aURL) === aURL ) {
+                        aURL = new URL( aURL )
+                    }
+
+                    return !!(new this( aURL )).protected();
+                }
+
+                get acl() {
+                    return document.querySelector("table.acl").toJSON();
+                }
+
+                protected() {
+                    const pathDetails = this.acl;
+                    const pathname = this.url.pathname;
+                    const pathRow = pathDetails.find( (a) => {       
+                        const result = (this.url.pathname === a.Path.innerHTML);
+                        return result;
+                    });
+                    return !!pathRow;
+                }
+
+                protectedForUser( aUsername ) {
+                    const pathDetails = document.querySelector("table.acl").toJSON();
+                    const pathRow = pathDetails.find( (a) => {       
+                        const result = (this.url.pathname === a.Path.innerHTML && aUsername == a.User.innerHTML);
+                        return result;
+                    });
+                }
+            }
+
+            class Authenticator {
+                static async authenticate( request ) {
+
+                    const page = new Page( new URL( request.url ) );
+                    if ( !page.protected() ) {
+                        //console.log(`${request.url} does not require authentication`);
+                        return true;
+                    }
+
+                    const authHeader = request.headers.get('Authorization');
+                    if (!authHeader) {
+                        const headers = new Headers();
+                            headers.set('WWW-Authenticate', `Basic realm=Site.Realm"}"`)
+                            return new Response("No username and password submitted", {
+                                status: 401,
+                                headers
+                            });
+                    } else {
+                        const [type, auth] = authHeader.split(' ');
+                        if ( type === 'Basic' ) {       
+                            const [ username, password ]  = window.atob( auth ).split(':');
+                            const user = await User.validate( username, password );
+                            if ( user ) {
+                                //console.log(`checking access to ${request.url} for ${user.username}`);
+                                if ( user.can(request.method, new URL( request.url ).pathname) ) {
+                                    return true;
+                                } else {
+                                    //console.log("user should not have access");
+                                }
+                                return new Response("Unauthorized", {
+                                    status: 401
+                                })
+                            } else {
+                                // we're not going to send a WWW-Authenticate header because they failed it //
+                                //console.log(`username: ${username}, password: ${password}`);
+                                return new Response("Invalid username & password", {
+                                    status: 401
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+
             class PasswordHasher {
                 static async hash(password) {
                     const encoder = new (typeof TextEncoder !== 'undefined' ? TextEncoder : this.dom.window.TextEncoder)();
@@ -79,10 +173,10 @@
                     }
                 }
 
-                static async authenticate( username, password ) {   
+                static async validate( username, password ) {   
                     const userTable = document.querySelector('table.users');
                     const tableObject = userTable.toJSON();
-                    const userRow = document.querySelector('table.users').toJSON().find( (a) => a.Username.innerHTML === username );
+                    const userRow = document.querySelector('table.users').toJSON().find( (a) => a.Username.innerHTML === username );                    
                     if ( userRow ) {
                         const result = await PasswordHasher.verify(password, userRow.Password.innerHTML);
                         if ( result ) {
@@ -90,26 +184,56 @@
                             user.username = username;
                             return user;
                         }
+                    } else {
+                        //console.log(`could not find user '${username}'`);
                     }
                     return false;
                 }
 
-                static can( aUsername = "", aMethod = "GET", aPath = "/", aSelector = "" ) {
+                static _simplecheck( aUsername = "", aMethod = "GET", aPath = "/", aSelector = "") {
                     const pathDetails = document.querySelector("table.acl").toJSON();
+                    const pathRow = pathDetails.find( (a) => {                       
+                        const result = (a.Path.innerHTML === aPath && a.Entity.innerHTML === aUsername)
+                        return result;
+                    });
+                    //console.log( pathRow );
+                    if ( pathRow && pathRow[aMethod] ) {
+                        const result = pathRow[aMethod].querySelector('input').checked;
+                        return result;
+                    }
+                }
 
+                static can( aUsername = "", aMethod = "GET", aPath = "/", aSelector = "" ) {
+                    const groups = this.groupsFor( aUsername );
+                    const groupresult = !!groups.find( (group) => {
+                        const simplecheck = this._simplecheck( group, aMethod, aPath, aSelector )
+                        //console.log(`${aUsername} is a member of ${group}. Does group ${group} have access to ${aPath}? ${(simplecheck) ? 'yes' : 'no'}`);
+                        return simplecheck;                        
+                    });
+                    
+                    if ( groupresult == true ) {
+                        if ( this._simplecheck(...arguments) != false ) {
+                            return true;
+                        }
+                    }
+
+                    const pathDetails = document.querySelector("table.acl").toJSON();
                     const pathRow = pathDetails.find( (a) => {                       
                         const result = (a.Path.innerHTML === aPath && a.Entity.innerHTML === aUsername && a.Selector.innerHTML === aSelector)
                         return result;
                     });
 
                     if ( pathRow && pathRow[aMethod] ) {
-                        return pathRow[aMethod].querySelector('input').checked;
+                        const result = pathRow[aMethod].querySelector('input').checked;
+                        //console.log(`Checking acess to ${aPath} for ${aUsername} ${aMethod}: ${result}`);
+                        return result;
                     } else if (!pathRow && aPath != "*") {
-                        console.log(`There was no entry, for ${aUsername} ${aMethod} so checking default allowances`);
-                        return this.can( aUsername, aMethod, "*", aSelector )
+                        const result = this.can( aUsername, aMethod, "*", aSelector )
+                        //console.log(`There was no entry for ${aPath} to access for ${aUsername} ${aMethod} so checking default allowances: ${result}`);
+                        return result; 
                     }
 
-                    return false;
+                    return ;
                 }
 
                 can(aMethod, aPath, aSelector = "") {
@@ -209,10 +333,53 @@
             }
             customElements.define("password-entry", PasswordEntryElement)
             window.User = User;
+            window.Authenticator = Authenticator;
+            window.Page = Page;
+
         </script>
     </head>
     <body>
         <h1>Authorization</h1>
+
+        <fieldset class="test">
+            <legend>Test Access</legend>
+            <section>
+                <label>User: <input id="test-name" type="name" value="james"></label>
+                <label>Password: <input id="test-password" type="password" value="secret"></label>
+            </section>
+            <section>
+                <select id="test-method">
+                    <option>GET</option>
+                    <option>PUT</option>
+                    <option>POST</option>
+                    <option>DELETE</option>
+                </select>
+                <label>URL: <input id="test-url" type="text" value="http://localhost/foo/bar.html"></label>
+            </section>
+            <button>Test</button>
+            <script>
+                (() => {
+                    const subset = document.querySelector("fieldset.test")
+                    const button = subset.querySelector("button");
+                    button.addEventListener('click', async () => {
+                        const unpw   = `${subset.querySelector('#test-name').value}:${subset.querySelector('#test-password').value}`;
+                        const url    = subset.querySelector('#test-url').value;
+
+                        const headers = new Headers({ Authorization: `Basic ${btoa( unpw )}` })
+                        const response = await Authenticator.authenticate( new Request(url, {
+                            method: subset.querySelector('#test-method').value,
+                            headers
+                        }) );
+                        if ( response === true ) {
+                            subset.setAttribute('style', "background-color: green")
+                        } else {
+                            subset.setAttribute('style', "background-color: red")
+                        }
+                    })                    
+                })()
+            </script>
+        </fieldset>
+
         <section>
 
             <form id="new-user" method="put" action="table.users tbody" template="template#user-row-template"></form>
@@ -226,16 +393,16 @@
 
             <form id="acl-row" method="put" action="table.acl tbody" template="template#acl-row-template"></form>
             <template id="acl-row-template">
-                <tr method="put" contenteditable="true">
-                    <td><slot name="path">filename goes here</slot></td>
-                    <td><slot name="username">username goes here</slot></td>
-                    <td><slot name="selector">selector goes here</slot></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>                    
-                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
+                <tr>
+                    <td method="put" contenteditable="true"><slot name="path">filename goes here</slot></td>
+                    <td method="put" contenteditable="true"><slot name="username">username goes here</slot></td>
+                    <td method="put" contenteditable="true"><slot name="selector">selector goes here</slot></td>
+                    <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>                    
+                    <td><button class="acl-row-delete">Delete</button></td>
                 </tr>
             </template>
             
@@ -250,14 +417,20 @@
                 <tbody>                
                     <tr>
                         <td>james</td>
-                        <td>K7gNU3sdo+OL0wNhqoVWhr3g6s1xYv72ol/pe/Unols=</td>
+                        <td></td>
                         <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
                     </tr>
                 
             
                 <tr>
                     <td>ben</td>
-                    <td>lrfEkQq4r2V1WfISvnzb/jOrRbjGggZoTMua0ncBLl8=</td>
+                    <td></td>
+                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
+                </tr>
+            
+                <tr>
+                    <td>bob</td>
+                    <td></td>
                     <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
                 </tr>
             </tbody>
@@ -306,6 +479,9 @@
                         <button method="delete" remove="closest" selector="td">x</button>
                     </td>
                     <td>
+                    <span contenteditable="true" class="input">bob<br></span>
+                    <button method="delete" remove="closest" selector="td">x</button>
+                </td><td>
                         <button class="add-group">Add member</button>
                         <button remove="closest" selector="tr">Delete Group</button>
                     </td>                    
@@ -317,24 +493,12 @@
                     <span contenteditable="true" class="input">ben</span>
                     <button method="delete" remove="closest" selector="td">x</button>
                 </td><td>
-                    <span contenteditable="true" class="input">james</span>
-                    <button method="delete" remove="closest" selector="td">x</button>
-                </td><td>
                         <button class="add-group">Add member</button>
                         <button remove="closest" selector="tr">Delete Group</button>
                     </td>                    
                 </tr>
             
-                <tr method="put">
-                    <td contenteditable="true">miners</td>
-                    <td>
-                    <span contenteditable="true" class="input">ben</span>
-                    <button method="delete" remove="closest" selector="td">x</button>
-                </td><td>
-                        <button class="add-group">Add member</button>
-                        <button remove="closest" selector="tr">Delete Group</button>
-                    </td>                    
-                </tr>
+                
             </tbody>
                 <tfoot>
                     <tr>
@@ -343,17 +507,29 @@
                     </tr>
                 </tfoot>
             </table>
-            <script type="module">
-                import SelectorSubscriber from "https://jamesaduncan.github.io/selector-subscriber/index.mjs";
-                SelectorSubscriber.subscribe('button.add-group', (theButton) => {
-                    theButton.addEventListener('click', () => {
-                                        const clone = document.querySelector('template#group-column-template').content.firstElementChild.cloneNode(true);
-                                        console.log( clone )
-                                        theButton.parentNode.insertAdjacentElement('beforebegin', clone)
-                                    });
-                });
-            </script>
-            
+           
+        </section>
+
+        <section>
+            <table class="site" border="1">
+                <caption>This table represents site wide settings</caption>
+                <thead>
+                    <tr>
+                        <th type="col">Setting</th>
+                        <th type="col">Value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td method="put" contenteditable="true">Default</td>
+                        <td method="put" contenteditable="true">Deny</td>
+                    </tr>
+                    <tr>
+                        <td method="put" contenteditable="true">Realm</td>
+                        <td method="put" contenteditable="true">Beam Basic Auth</td>
+                    </tr>
+                </tbody>
+            </table>
         </section>
 
         <section>
@@ -372,7 +548,6 @@
                     </tr>
                 </thead>
                 <tbody>
-            
                     <tr method="put" contenteditable="true">
                         <td>*</td>
                         <td>everybody</td>
@@ -382,9 +557,9 @@
                         <td contenteditable="false"><input type="checkbox"></td>
                         <td contenteditable="false"><input type="checkbox"></td>
                         <td contenteditable="false"><input type="checkbox"></td>                    
-                        <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
+                        <td><button class="acl-row-delete">Delete</button></td>
                     </tr>
-                
+                    
                     <tr method="put" contenteditable="true">
                         <td>*</td><td>administrators</td>
                         <td></td>
@@ -393,44 +568,47 @@
                         <td contenteditable="false"><input type="checkbox" checked="true"></td>
                         <td contenteditable="false"><input type="checkbox" checked="true"></td>
                         <td contenteditable="false"><input type="checkbox" checked="true"></td>                    
-                        <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
+                        <td><button class="acl-row-delete">Delete</button></td>
                     </tr>                    
 
-                <tr method="put" contenteditable="true">
-                        <td>/.auth.html</td>
-                        <td>james</td>
+                    <tr method="put" contenteditable="true">
+                        <td>/.auth.html</td><td>administrators</td>
                         <td></td>
                         <td contenteditable="false"><input type="checkbox" checked=""></td>
                         <td contenteditable="false"><input type="checkbox" checked=""></td>
                         <td contenteditable="false"><input type="checkbox" checked=""></td>
                         <td contenteditable="false"><input type="checkbox" checked=""></td>
                         <td contenteditable="false"><input type="checkbox" checked=""></td>
-                        <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
+                        <td><button class="acl-row-delete">Delete</button></td>
                     </tr>
             
-                <tr method="put" contenteditable="true">
-                    <td>/magical.mjs</td>
-                    <td>james</td>
-                    <td></td>
-                    <td contenteditable="false"><input type="checkbox" checked="true"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>                    
-                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
+                    <tr>
+                        <td method="put" contenteditable="true">/.auth.html</td>
+                        <td method="put" contenteditable="true">everybody</td>
+                        <td method="put" contenteditable="true"></td>
+                        <td method="put"><input type="checkbox"></td>
+                        <td method="put"><input type="checkbox"></td>
+                        <td method="put"><input type="checkbox"></td>
+                        <td method="put"><input type="checkbox"></td>
+                        <td method="put"><input type="checkbox"></td>                    
+                        <td><button class="acl-row-delete">Delete</button></td>
+                    </tr>
+           
+                <tr>
+                    <td method="put" contenteditable="true">/foo/bar.html</td>
+                    <td method="put" contenteditable="true">james</td>
+                    <td method="put" contenteditable="true"></td>
+                    <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>                    
+                    <td><button class="acl-row-delete">Delete</button></td>
                 </tr>
             
-                <tr method="put" contenteditable="true">
-                    <td>/.auth.html</td>
-                    <td>everybody</td>
-                    <td></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>
-                    <td contenteditable="false"><input type="checkbox"></td>                    
-                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
-                </tr>
+                
+            
+                
             </tbody>
                 <tfoot>
                     <tr>
@@ -442,5 +620,24 @@
                 </tfoot>
             </table>
         </section>
-    
+        <script type="module">
+            import SelectorSubscriber from "https://jamesaduncan.github.io/selector-subscriber/index.mjs";
+            SelectorSubscriber.subscribe('button.add-group', (theButton) => {
+                theButton.addEventListener('click', () => {
+                                    const clone = document.querySelector('template#group-column-template').content.firstElementChild.cloneNode(true);
+                                    theButton.parentNode.insertAdjacentElement('beforebegin', clone)
+                                });
+            });
+
+            SelectorSubscriber.subscribe('button.acl-row-delete', (theButton) => {
+                theButton.addEventListener('focusout', (e) => {
+                    e.stopPropagation();
+                });
+                theButton.addEventListener('click', () => {
+                    const tr = theButton.closest('tr');
+                    tr.DELETE();
+                    tr.remove();
+                });
+            });
+        </script>
     </body></html>
