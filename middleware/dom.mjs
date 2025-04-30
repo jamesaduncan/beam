@@ -242,17 +242,19 @@ class DOMServer {
             const doc = await this.readDOM( req, config, context );
             const content = await req.text();
             // make sure it is actually a thing
-            const test = new DenoDOM.DOMParser().parseFromString( content, "text/html" );
-            if ( test ) {
-                // somewhat annoyingly, this is a more reliable method than using an actual parser.
-                const detagged = content.replace(/(^<([a-zA-Z]+)[^>]*>)|(<\/\2>$)/,'');
+            const fastdom = new DenoDOM.DOMParser().parseFromString( content, "text/html" );
+            if ( fastdom ) {
+                // somewhat annoyingly, this is a more reliable method than using an actual parser.                
+                //const detagged = content.replace(/(^<([a-zA-Z]+)[^>]*>)|(<\/\2>$)/,'');
                 const theElement = doc.querySelector( selector );
-                const closestWithACL = theElement.closest('[acl-put]');
-                theElement.innerHTML = detagged;
+                // We set outerHTML so that document.querySelector('p').PUT() works, for example.
+                // will this work internally? we'll see.
+                theElement.outerHTML = content;//detagged; 
                 const theEvent = createCustomEvent(doc, 'HTTPPut', { bubbles: true, cancelable: true, detail: {
                     request: req,
                 }});
-                doc.querySelector( selector ).dispatchEvent( theEvent );
+                //doc.querySelector( selector ).dispatchEvent( theEvent );
+                theElement.dispatchEvent( theEvent );
             } else {
                 console.log("parse failed.");
             }
