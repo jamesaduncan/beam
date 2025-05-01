@@ -69,11 +69,18 @@
                         return true;
                     }
 
-                    const authHeader = request.headers.get('Authorization');
+                    let selector = "";
+                    const authHeader  = request.headers.get('Authorization');
+                    const rangeHeader = request.headers.get('Range');
+                    if (rangeHeader && rangeHeader.match(/^selector=.+$/)) {
+                        [,selector] = rangeHeader.match(/^selector=(.+)$/)
+                        console.log(`selector is ${selector}`)
+                    }
+
                     if (!authHeader) {
                         const headers = new Headers();
                             headers.set('WWW-Authenticate', `Basic realm=Site.Realm"}"`)
-                            return new Response("No username and password submitted", {
+                            return new Response("Username and password required", {
                                 status: 401,
                                 headers
                             });
@@ -84,20 +91,18 @@
                             const user = await User.validate( username, password );
                             if ( user ) {
                                 //console.log(`checking access to ${request.url} for ${user.username}`);
-                                if ( user.can(request.method, new URL( request.url ).pathname) ) {
+                                if ( user.can(request.method, new URL( request.url ).pathname, selector) ) {
                                     return true;
                                 } else {
                                     //console.log("user should not have access");
                                 }
-                                return new Response("Unauthorized", {
-                                    status: 401
-                                })
+                                // we don't send the WWW-Authenticate helper because they authenticated, and they're not
+                                // allowed access to the requested resource.
+                                return new Response("Unauthorized", { status: 401 })
                             } else {
                                 // we're not going to send a WWW-Authenticate header because they failed it //
                                 //console.log(`username: ${username}, password: ${password}`);
-                                return new Response("Invalid username & password", {
-                                    status: 401
-                                })
+                                return new Response("Invalid username & password", { status: 401 });
                             }
                         }
                     }
@@ -356,16 +361,24 @@
                 </select>
                 <label>URL: <input id="test-url" type="text" value="/index.html"></label>
             </section>
+            <section>
+                <label>Selector <input id="test-selector" type="text" value=""></label>
+            </section>
             <button>Test</button>
             <script>
                 (() => {
                     const subset = document.querySelector("details.test")
                     const button = subset.querySelector("button");
+
                     button.addEventListener('click', async () => {
                         const unpw   = `${subset.querySelector('#test-name').value}:${subset.querySelector('#test-password').value}`;
                         const url    = "http://example.com" + subset.querySelector('#test-url').value;
 
-                        const headers = new Headers({ Authorization: `Basic ${btoa( unpw )}` })
+                        const headers  = new Headers({ Authorization: `Basic ${btoa( unpw )}` })
+                        const selector = subset.querySelector('#test-selector').value;
+                        if ( selector ) {
+                            headers.set("Range", `selector=${selector}`)
+                        }
                         const response = await Authenticator.authenticate( new Request(url, {
                             method: subset.querySelector('#test-method').value,
                             headers
@@ -631,7 +644,19 @@
                     <td method="put" contenteditable="true">workers</td>
                     <td method="put" contenteditable="true">table.hours</td>
                     <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox" checked="true"></td>
                     <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>
+                    <td method="put"><input type="checkbox"></td>                    
+                    <td><button class="acl-row-delete">Delete</button></td>
+                </tr>
+            
+                <tr>
+                    <td method="put" contenteditable="true">/test</td>
+                    <td method="put" contenteditable="true">everybody<br></td>
+                    <td method="put" contenteditable="true">table</td>
+                    <td method="put"><input type="checkbox" checked="true"></td>
+                    <td method="put"><input type="checkbox" checked="true"></td>
                     <td method="put"><input type="checkbox"></td>
                     <td method="put"><input type="checkbox"></td>
                     <td method="put"><input type="checkbox"></td>                    
