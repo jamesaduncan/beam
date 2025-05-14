@@ -7,6 +7,14 @@
                 min-width: 5em;
                 display: inline-block;
             }
+
+            .pass {
+                background-color: green;
+            }
+
+            .fail {
+                background-color: red;
+            }
         </style>
         <script>
 
@@ -61,6 +69,21 @@
             }
 
             class Authenticator {
+                static async test(options = {}) {
+                    const unpw   = `${options.username}:${options.password}`;
+                    const url    = "http://example.com" + options.url;
+
+                    const headers  = new Headers({ Authorization: `Basic ${btoa( unpw )}` })
+                    if ( options.selector ) {
+                        headers.set("Range", `selector=${options.selector}`)
+                    }
+                    const response = await Authenticator.authenticate( new Request(url, {
+                        method: options.method || 'GET',
+                        headers
+                    }) );
+                    return response;
+                }
+
                 static async authenticate( request ) {
 
                     const page = new Page( new URL( request.url ) );
@@ -74,7 +97,6 @@
                     const rangeHeader = request.headers.get('Range');
                     if (rangeHeader && rangeHeader.match(/^selector=.+$/)) {
                         [,selector] = rangeHeader.match(/^selector=(.+)$/)
-                        console.log(`selector is ${selector}`)
                     }
 
                     if (!authHeader) {
@@ -346,7 +368,7 @@
     <body>
         <h1>Authorization</h1>
 
-        <details class="test">
+        <details class="test" open="">
             <summary>Test Access</summary>
             <section>
                 <label>User: <input id="test-name" type="name"></label>
@@ -393,6 +415,161 @@
             </script>
         </details>
 
+        <details class="test-many" open="true">
+            <template id="test-row-template">
+                <tr class="test">
+                    <td class="username" method="put" contenteditable="true"><slot name="username">Users' username</slot></td>
+                    <td class="password" method="put" contenteditable="true"><slot name="password">Users' password</slot></td>
+                    <td class="path" method="put" contenteditable="true"><slot name="path">Path</slot></td>
+                    <td class="method" method="put" contenteditable="true"><slot name="method"></slot></td>
+                    <td class="selector" method="put" contenteditable="true"><slot name="selector"></slot></td>
+                    <td>
+                        <button class="run">Run Test</button>
+                        <button remove="closest" selector="tr" method="delete">Remove Test</button>                        
+                    </td>
+                </tr>
+            </template>
+
+            <form id="test-list-add" method="put" action="table#test-list tbody" template="template#test-row-template"></form>
+
+
+            <table id="test-list" border="1">
+                <thead>
+                    <tr>
+                        <th type="col">Username</th>
+                        <th type="col">Password</th>
+                        <th type="col">Path</th>
+                        <th type="col">Method</th>
+                        <th type="col">Selector</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    <tr class="test">
+                        <td class="username" method="put" contenteditable="true">test-user</td>
+                        <td class="password" method="put" contenteditable="true">secret</td>
+                        <td class="path" method="put" contenteditable="true">/</td>
+                        <td class="method" method="put" contenteditable="true">GET</td>
+                        <td class="selector" method="put" contenteditable="true"></td>
+                        <td>
+                            <button class="run">Run Test</button>
+                            <button remove="closest" selector="tr" method="delete">Remove Test</button>                        
+                        </td>
+                        </tr>
+                    <tr class="test">
+                        <td class="username" method="put" contenteditable="true">test-user</td>
+                        <td class="password" method="put" contenteditable="true">secret</td>
+                        <td class="path" method="put" contenteditable="true">/</td>
+                        <td class="method" method="put" contenteditable="true">PUT</td>
+                        <td class="selector" method="put" contenteditable="true"></td>
+                        <td>
+                            <button class="run">Run Test</button>
+                            <button remove="closest" selector="tr" method="delete">Remove Test</button>                        
+                        </td>
+                        </tr>
+                    <tr class="test">
+                        <td class="username" method="put" contenteditable="true"></td>
+                        <td class="password" method="put" contenteditable="true"></td>
+                        <td class="path" method="put" contenteditable="true">/</td>
+                        <td class="method" method="put" contenteditable="true">PUT</td>
+                        <td class="selector" method="put" contenteditable="true"></td>
+                        <td>
+                            <button class="run">Run Test</button>
+                            <button remove="closest" selector="tr" method="delete">Remove Test</button>                        
+                        </td>
+                        </tr>
+                
+                
+            
+                
+            
+                
+            
+                <tr class="test">
+                    <td class="username" method="put" contenteditable="true">james</td>
+                    <td class="password" method="put" contenteditable="true"></td>
+                    <td class="path" method="put" contenteditable="true">/.auth.html</td>
+                    <td class="method" method="put" contenteditable="true">GET</td>
+                    <td class="selector" method="put" contenteditable="true"></td>
+                    <td>
+                        <button class="run">Run Test</button>
+                        <button remove="closest" selector="tr" method="delete">Remove Test</button>                        
+                    </td>
+                </tr>
+            
+                <tr class="test">
+                    <td class="username" method="put" contenteditable="true">test-user</td>
+                    <td class="password" method="put" contenteditable="true"></td>
+                    <td class="path" method="put" contenteditable="true">/test</td>
+                    <td class="method" method="put" contenteditable="true">PUT</td>
+                    <td class="selector" method="put" contenteditable="true">table</td>
+                    <td>
+                        <button class="run">Run Test</button>
+                        <button remove="closest" selector="tr" method="delete">Remove Test</button>                        
+                    </td>
+                </tr>
+            </tbody>
+                <tfoot>
+                    <tr>
+                        <td>
+                            <input form="test-list-add" name="username" type="text" placeholder="a username...">
+                        </td>
+                        <td>
+                            <input form="test-list-add" name="password" type="text" placeholder="a password...">
+                        </td>
+                        <td>
+                            <input form="test-list-add" name="path" type="text" placeholder="a path...">
+                        </td>
+                        <td>
+                            <select form="test-list-add" name="method">
+                                <option value="GET">GET</option>
+                                <option value="PUT">PUT</option>
+                                <option value="POST">POST</option>
+                                <option value="DELETE">DELETE</option>
+                            </select>
+                        </td>
+                        <td>
+                            <input form="test-list-add" name="selector" type="text" placeholder="a selector...">
+                        </td>
+                        <td>
+                            <button form="test-list-add">Add Test</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="5">&nbsp;</td>
+                        <td><button class="all">Test All</button></td>
+                    </tr>
+                </tfoot>            
+            </table>
+            <script type="module">
+                import SelectorSubscriber from "https://jamesaduncan.github.io/selector-subscriber/index.mjs";
+                SelectorSubscriber.subscribe('.test-many tbody tr', (row) => {
+                    row.querySelector('button.run').addEventListener('click', async () => {
+                        const username = row.querySelector('td.username').innerHTML;
+                        const password = row.querySelector('td.password').innerHTML;
+                        const path     = row.querySelector('td.path').innerHTML;
+                        const method   = row.querySelector('td.method').innerHTML;
+                        const selector = row.querySelector('td.selector').innerHTML;
+                        const options = {
+                            username, password, url: path, method, selector                            
+                        }
+                        const response = await Authenticator.test( options );
+                        if ( response ) {
+                            if ( response instanceof Response && !response.ok ) {
+                                row.classList.add('fail');
+                            } else {
+                                row.classList.add('pass')
+                            }
+                        }
+                    })
+                })
+            
+                document.querySelector('.test-many tfoot button.all').addEventListener('click', (theEvent) => {
+                    document.querySelectorAll('.test-many tbody tr button.run').forEach( (button) => button.click() )
+                });
+            </script>
+        </details>
+
         <section>
 
             <form id="new-user" method="put" action="table.users tbody" template="template#user-row-template"></form>
@@ -433,6 +610,14 @@
                         <td>K7gNU3sdo+OL0wNhqoVWhr3g6s1xYv72ol/pe/Unols=</td>
                         <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
                     </tr>
+            
+                <tr>
+                    <td>james</td>
+                    <td>tr7TrT3wcwqkxmSOmf2xBtou9YfamrMfE/9WZRjqGz0=</td>
+                    <td><button remove="closest" selector="tr" method="delete">Delete</button></td>
+                </tr>
+            
+                
             </tbody>
                 <tfoot>
                     <tr>
@@ -479,6 +664,9 @@
                         <button method="delete" remove="closest" selector="td">x</button>
                     </td>
                     <td>
+                    <span contenteditable="true" class="input">james</span>
+                    <button method="delete" remove="closest" selector="td">x</button>
+                </td><td>
                         <button class="add-group">Add member</button>
                         <button remove="closest" selector="tr">Delete Group</button>
                     </td>                    
@@ -589,15 +777,6 @@
                         <td method="put"><input type="checkbox"></td>                    
                         <td><button class="acl-row-delete">Delete</button></td>
                     </tr>
-           
-                
-            
-                
-            
-                
-            
-                
-            
                 <tr>
                     <td method="put" contenteditable="true">/timesheet/</td>
                     <td method="put" contenteditable="true">workers</td>
